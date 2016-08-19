@@ -8,9 +8,11 @@ var tileGrid = [[],[],[],[],[],[],[],[]];
 var spawnPoint = [4,6];
 
 var characterPos = spawnPoint;
-//var movePos = spawnPoint;
 
 var characterSprite = "fighter2.png";
+
+// move or inspect on mouse click
+var mouseMode = "move"
 
 var tileSize = 33;
 
@@ -23,17 +25,18 @@ var fame = 0;
 var inventory = [];
 
 var blockProps = [];
-blockProps[0] = { solid: false, z: 0};
-blockProps[1] = { solid: true, z: 0};
-blockProps[2] = { solid: true, z: 0};
-blockProps[3] = { solid: true, z: 0};
-blockProps[4] = { solid: true, z: 101};
+blockProps[0] = { name: "Grass", solid: false, z: 0};
+blockProps[1] = { name: "Rocks", solid: true, z: 0};
+blockProps[2] = { name: "Wall", solid: true, z: 0};
+blockProps[3] = { name: "Wall", solid: true, z: 0};
+blockProps[4] = { name: "Wall", solid: true, z: 101};
 
 var entities = [];
 entities[0] = { posX: 2, posY: 4, sprite: "gold-coins.png", type: 0, name: "Gold", quantity: 7, active: true};
 entities[1] = { posX: 4, posY: 2, sprite: "gold-coins.png", type: 0, name: "Gold", quantity: 9, active: true};
 entities[2] = { posX: 10, posY: 1, sprite: "chest-closed.png", sprite2: "chest-open.png", type: 1, name: "Chest", item: "key", quantity: 1, gold: 3, active: true};
-entities[3] = { posX: 10, posY: 6, sprite: "dagger.png", type: 2, name: "dagger", quantity: 1, active: true};
+entities[3] = { posX: 10, posY: 6, sprite: "dagger.png", type: 2, name: "Dagger", quantity: 1, active: true};
+entities[4] = { posX: 1, posY: 6, sprite: "kobold.png", type: 3, name: "Kobold Prisoner", quantity: 1, active: true};
 
 var entityTypes = [];
 entityTypes[0] = {name:"gold", solid: false};
@@ -55,8 +58,8 @@ $(document).ready(function(){
 	$("#character").append("<img src='" + characterSprite + "' />");
 	$("#character").css("left", characterPos[0] * tileSize - 11);
 	$("#character").css("top", characterPos[1] * tileSize - 11);
-	$("#game-area-wrapper, #tile-layer, #entity-layer, #character-layer").css("height", levelHeight * (tileSize) + 1);
-	$("#game-area-wrapper, #tile-layer, #entity-layer, #character-layer").css("width", levelWidth * (tileSize) + 1);
+	$("#game-area-wrapper, #tile-layer, #entity-layer, #character-layer, #top-layer").css("height", levelHeight * (tileSize) + 1);
+	$("#game-area-wrapper, #tile-layer, #entity-layer, #character-layer, #top-layer").css("width", levelWidth * (tileSize) + 1);
 	//drawTiles();
 	
 	$.ajax({url: "map1.xml", success: loadMap, cache: false});
@@ -73,7 +76,18 @@ $(document).ready(function(){
 		if (key == "39")
 			moveChar([characterPos[0] + 1, characterPos[1]]);
 		
-   });
+	});
+	
+	$("#top-layer").click(function(e){
+		var xClickPos = Math.floor((e.pageX - this.offsetLeft) / tileSize);
+    	var yClickPos = Math.floor((e.pageY - this.offsetTop) / tileSize);
+    	if (xClickPos > levelWidth - 1)
+    		xClickPos--;
+    	if (yClickPos > levelHeight - 1)
+    		yClickPos--;
+		console.log("x: " + xClickPos + "y: " + yClickPos);
+		inspectTile(xClickPos, yClickPos);
+	});
 }); 
 
 function loadMap(xml) {
@@ -238,4 +252,14 @@ function showMessage(text) {
 	});
 
 	msgID++;
+}
+
+function inspectTile(xPos, yPos) {
+	for (var i=0;i<entities.length;i++) {
+		if (entities[i].posX == xPos && entities[i].posY == yPos) {
+			console.log(entities[i].name + " at " + xPos + "," + yPos);
+		}
+	}
+	var tileID = tileGrid[yPos][xPos];
+	console.log(blockProps[tileID].name + "(" + tileID + ") Solid: " + blockProps[tileID].solid)
 }
