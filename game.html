@@ -1,0 +1,117 @@
+<html>
+<head>
+<title>BrowseRPG</title>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="game.js"></script>
+<style type='text/css'>
+body{
+	padding:0;
+	margin:0;
+	background-image: radial-gradient(farthest-corner at 50% 30% , rgb(33, 102, 120) 0%, rgb(11, 38, 42) 100%);
+	height: 100%;
+}
+.tile {
+	height:32px;
+	width:32px;
+	border-right:1px solid #444;
+	border-bottom:1px solid #444;
+	float:left;
+	background-size: 100% 100%;
+	position:relative;
+}
+#top-menu {
+	position:relative;
+	top:0px;
+	width:100%;
+	height:35px;
+	background-color:#444;
+	border-bottom:1px solid #222;
+	color:#EEE;
+}
+#top-menu h3 {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+#game-area-wrapper {
+	margin:15px auto;
+	border:2px solid black;
+}
+#game-area {
+	border-top:1px solid #444;
+	border-left:1px solid #444;
+	height:100%;
+	width:100%;
+}
+#tile-layer, #character-layer, #entity-layer {position:absolute;}
+#input {
+	position: absolute;
+	width: 100%;
+	text-align: center;
+	bottom: 0px;
+}
+#character {
+	height:54px;
+	width:54px;
+	position:absolute;
+	text-align:center;
+	transition:all 0.2s linear;
+}
+#char-message {
+	position:absolute;
+	z-index:200;
+	color:yellow;
+	font-family:"Lucida Console", Monaco, monospace;
+	font-size:12px;
+}
+#character img {
+	vertical-align:middle;
+	position:relative;
+	z-index:100;
+}
+.entity {
+	height:54px;
+	width:54px;
+	position:absolute;
+	text-align:center;
+	transition:all 0.2s linear;
+}
+.entity img {
+	vertical-align:middle;
+	position:relative;
+	z-index:100;
+}
+.aligner {
+    display: inline-block;
+    height: 100%;
+    vertical-align: middle;
+}
+</style>
+</head>
+<body>
+<div id="top-menu">
+	<h3></h3>
+</div>
+<div id="game-area-wrapper">
+<div id="game-area">
+<div id="tile-layer">
+	
+</div>
+<div id="entity-layer">
+	
+</div>
+<div id="character-layer">
+	<div id="character"><div id="char-message"></div><span class="aligner"></span></div>
+</div>
+</div>
+</div>
+<div id="input">
+	<div id="stats"></div>
+	<div id="controls"></div>
+	<div id="info">
+		Gold: <div id="gold-count"></div>
+		Inventory: <div id="inventory"></div>
+	</div>
+</div>
+</body>
+</html>
