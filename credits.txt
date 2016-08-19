@@ -1,0 +1,10 @@
+This game uses resources from the following sources:
+
+Treasure chests by Blarumyrran, CC0
+http://opengameart.org/content/treasure-chests-32x32-and-16x16
+
+Tile art by Hyptosis, CC-BY 3.0
+http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
+
+AngBandTk tiles by David E. Gervais, CC-BY 3.0
+http://pousse.rapiere.free.fr/tome/tome-tiles.htm
