@@ -1,14 +1,19 @@
+<!DOCTYPE html>
 <html>
 <head>
 <title>Everlasting</title>
+<meta charset="utf-8">
 <script src="https://ajax.googleapis.com/ajax/libs/jquery/1.12.4/jquery.min.js"></script>
+<script src="easystar/easystar-0.3.0.min.js"></script>
+<script src="pixi/pixi.min.js"></script>
 <script src="game.js"></script>
 <style type='text/css'>
+html {height:100%;}
 body{
 	padding:0;
 	margin:0;
 	background-image: radial-gradient(farthest-corner at 50% 30% , rgb(33, 102, 120) 0%, rgb(11, 38, 42) 100%);
-	height: 100%;
+	min-height: 100%;
 }
 .tile {
 	height:32px;
@@ -35,7 +40,6 @@ body{
 }
 #game-area-wrapper {
 	margin:15px auto;
-	border:2px solid black;
 }
 #game-area {
 	border-top:1px solid #444;
@@ -89,6 +93,11 @@ body{
     height: 100%;
     vertical-align: middle;
 }
+.highlight {
+    -webkit-box-shadow:inset 0px 0px 0px 1px #dede39;
+    -moz-box-shadow:inset 0px 0px 0px 1px #dede39;
+    box-shadow:inset 0px 0px 0px 1px #dede39;
+}
 </style>
 </head>
 <body>
@@ -96,6 +105,7 @@ body{
 	<h3></h3>
 </div>
 <div id="game-area-wrapper">
+<!--
 <div id="game-area">
 <div id="tile-layer">
 	
@@ -108,6 +118,7 @@ body{
 </div>
 <div id="top-layer"></div>
 </div>
+-->
 </div>
 <div id="input">
 	<div id="stats"></div>
