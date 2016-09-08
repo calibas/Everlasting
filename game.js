@@ -1,68 +1,40 @@
-var levelHeight = 8;
-var levelWidth = 16;
+var levelHeight;
+var levelWidth;
 
 var backgroundTile = 0;
+var tileSize = 33;
 
-//var tileGrid = [[],[],[],[],[],[],[],[]];
 var tileGrid = [];
-
 var tempGrid = [];
-
 var moveGrid = [];
-//var newArray = [];
 
-//var graph;
-
-//var easystar = new EasyStar.js();
-
-var spawnPoint = [4,6];
-
-var characterPos = spawnPoint;
-
+var characterPos;
 var characterSprite = "fighter2.png";
 
 // move or inspect on mouse click
 var mouseMode = "move"
 
-var tileSize = 33;
-
 var loaded = false;
-
 var doneMoving = true;
 
 var gold = 0;
-
 var fame = 0;
-
 var inventory = [];
 
-var blockProps = [];
-blockProps[0] = { name: "Grass", solid: false, z: 0};
-blockProps[1] = { name: "Rocks", solid: true, z: 0};
-blockProps[2] = { name: "Wall", solid: true, z: 0};
-blockProps[3] = { name: "Wall", solid: true, z: 0};
-blockProps[4] = { name: "Wall", solid: true, z: 101};
-
+var tileTypes = [];
 var entities = [];
-entities[0] = { posX: 2, posY: 4, sprite: "gold-coins.png", type: 0, name: "Gold", quantity: 7, active: true};
-entities[1] = { posX: 4, posY: 2, sprite: "gold-coins.png", type: 0, name: "Gold", quantity: 9, active: true};
-entities[2] = { posX: 10, posY: 1, sprite: "chest-closed.png", sprite2: "chest-open.png", type: 1, name: "Chest", item: "key", quantity: 1, gold: 3, active: true};
-entities[3] = { posX: 10, posY: 6, sprite: "dagger.png", type: 2, name: "Dagger", quantity: 1, active: true};
-entities[4] = { posX: 1, posY: 6, sprite: "kobold.png", type: 3, name: "Kobold Prisoner", quantity: 1, active: true, onInteract: "say:Hello!"};
 
 var entityTypes = [];
 entityTypes[0] = {name:"gold", solid: false};
 entityTypes[1] = {name:"container", solid: true};
 entityTypes[2] = {name:"item", solid: false};
 entityTypes[3] = {name:"npc", solid:true};
-
-var msgID = 0;
+entityTypes[4] = {name:"decor", solid:false};
 
 var tempSolid = [];
 
-var renderer = new PIXI.WebGLRenderer(levelWidth * tileSize + 3, levelHeight * tileSize + 3, {backgroundColor:"0x444444"});
+var renderer = new PIXI.autoDetectRenderer(2 * tileSize , 2 * tileSize, {backgroundColor:"0x444444"});
 renderer.roundPixels = true;
-//var loader = new PIXI.loaders.Loader();
 var stage = new PIXI.Container();
 var tileLayer = new PIXI.Container();
 var highlightLayer = new PIXI.Container();
@@ -75,39 +47,37 @@ stage.addChild(entityLayer);
 stage.addChild(charLayer);
 stage.addChild(overLayer);
 
-var bunny = null;
+//var bunny = null;
 var charSprite = null;
 var highlightBox = new PIXI.Graphics();
 var entitySprites = [];
 var shadows = [];
 var messages = [];
 
+var music;
+var sound = 1;
+
 resourceLoader();
 
 $(document).ready(function(){
 	
 	//document.body.appendChild(renderer.view);
-	
 	$('#game-area-wrapper').append(renderer.view);
 	
-	$("<style type='text/css'> .tile{background-image:url('t-" + backgroundTile + ".png')} </style>").appendTo("head");
-	//$("#input").text("Hello!");
-	for (var i=0;i<levelHeight;i++) {
-		for (var j=0;j<levelWidth;j++) {
-			$("#tile-layer").append("<div class='tile column-" + (j) + " row-" + (i) + "'></div>");
-		}	
+	if (getCookie('music') != '') {
+		$('#mute-music img').css('opacity', 0.4);
+		//music.pause();
 	}
-	//$("#character").css("background-image", "url('" + characterSprite + "')");
-	$("#character").append("<img src='" + characterSprite + "' />");
-	$("#character").css("left", characterPos[0] * tileSize - 11);
-	$("#character").css("top", characterPos[1] * tileSize - 11);
-	$("#game-area-wrapper, #tile-layer, #entity-layer, #character-layer, #top-layer").css("height", levelHeight * (tileSize) + 1);
-	$("#game-area-wrapper, #tile-layer, #entity-layer, #character-layer, #top-layer").css("width", levelWidth * (tileSize) + 1);
-	//drawTiles();
-	
+	if (getCookie('sound') != '') {
+		$('#mute-sound img').css('opacity', 0.4);
+		sound = 0;
+	}
+		
 	$.ajax({url: "map1.xml", success: loadMap, cache: false});
 	
+	//Make arrow keys move character
 	$(window).keypress(function(e) {
+	  if (loaded && doneMoving) {
        	var ev = e || window.event;
        	var key = ev.keyCode || ev.which;
        	if (key == "38")
@@ -118,26 +88,11 @@ $(document).ready(function(){
 			moveChar(characterPos[0] - 1, characterPos[1]);
 		if (key == "39")
 			moveChar(characterPos[0] + 1, characterPos[1]);
-		
+	  }
 	});
 	
-	$("#game-area").mousedown(function(e){ e.preventDefault(); });
-	
-	$("#top-layer").click(function(e){
-		var xClickPos = Math.floor((e.pageX - this.offsetLeft) / tileSize);
-    	var yClickPos = Math.floor((e.pageY - this.offsetTop) / tileSize);
-    	if (xClickPos > levelWidth - 1)
-    		xClickPos--;
-    	if (yClickPos > levelHeight - 1)
-    		yClickPos--;
-		console.log("x: " + xClickPos + "y: " + yClickPos);
-		inspectTile(xClickPos, yClickPos);
-		if (doneMoving) {
-			moveTo(xClickPos, yClickPos);
-			$(".highlight").removeClass("highlight");
-			$(".column-" + xClickPos + ".row-" + yClickPos).addClass("highlight");
-		}
-	});
+	$("#game-area-wrapper canvas").mousedown(function(e){ e.preventDefault(); });
+
 	$("#game-area-wrapper canvas").click(function(e){
 		var xClickPos = Math.floor((e.pageX - this.offsetLeft) / tileSize);
     	var yClickPos = Math.floor((e.pageY - this.offsetTop) / tileSize);
@@ -153,14 +108,98 @@ $(document).ready(function(){
 			highlightBox.position.y = yClickPos * tileSize - 1;
 			highlightBox.visible = true;
 		}
-
-
+	});
+	$("#mute-music").click(function(e){
+		if (music.paused) {
+			music.play();
+			$('#mute-music img').css('opacity', 1.0);
+			setCookie('music', '');
+		} else {
+			music.pause();
+			$('#mute-music img').css('opacity', 0.4);
+			setCookie('music', 'mute');
+		}
+	});
+	$("#mute-sound").click(function(e){
+		if (sound == 0) {
+			sound = 1;
+			$('#mute-sound img').css('opacity', 1.0);
+			setCookie('sound', '');
+		} else {
+			sound = 0;
+			$('#mute-sound img').css('opacity', 0.4);
+			setCookie('sound', '0');
+		}
 	});
 }); 
 
 function loadMap(xml) {
 	var title = $(xml).find('title').text();
 	$("#top-menu h3").text(title);
+	levelHeight = $(xml).find('levelHeight').text();
+	levelWidth = $(xml).find('levelWidth').text();
+	renderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);
+	backgroundTile = $(xml).find('backgroundTile').text();
+	playMusic($(xml).find('music').text());
+
+	//Set spawn point
+	var spawnX = parseInt($(xml).find('spawnX').text());
+	var spawnY = parseInt($(xml).find('spawnY').text());
+	characterPos = [spawnX,spawnY];
+	
+	//Load entities
+	var boolTypes = ['solid','active'];
+	var intTypes = ['quantity','gold'];
+	$(xml).find('entities').children().each(function(i) {
+		var entity = {};
+		entity.actions = []
+		 $.each(this.attributes, function(index, attrib){
+     		var name = attrib.name;
+     		var value = attrib.value;
+     		if (boolTypes.indexOf(name) != -1) {
+     			if (value == 'true')
+     				entity[name] = true;
+     			else
+     				entity[name] = false;
+     		} else if (intTypes.indexOf(name) != -1) {
+     			entity[name] = parseInt(value);
+     		} else {
+     			entity[name] = value;
+     		}
+		});
+		$(this).find('actions').children().each(function(i) {
+			console.log($(this).text());
+			var action = {};
+			action.text = $(this).text();
+			$.each(this.attributes, function(index, attrib){
+     			action[attrib.name] = attrib.value;
+     		});
+			//var action
+			entity['actions'].push(action);
+		});
+		entities.push(entity);
+	});
+	
+	//Load tiletypes
+	$(xml).find('tileTypes').children().each(function(i) {
+		var tileType = {};
+		 $.each(this.attributes, function(index, attrib){
+     		var name = attrib.name;
+     		var value = attrib.value;
+     		if (boolTypes.indexOf(name) != -1) {
+     			if (value == 'true')
+     				tileType[name] = true;
+     			else
+     				tileType[name] = false;
+			} else if (intTypes.indexOf(name) != -1) {
+     			tileType[name] = parseInt(value);
+     		} else {
+     			tileType[name] = value;
+     		}
+		});
+		tileTypes[tileType.index] = tileType;		
+	});
+	
 	var rawMap = $(xml).find('map').text();
 	console.log(rawMap);
 	var rows  = rawMap.split("\n");  
@@ -169,9 +208,8 @@ function loadMap(xml) {
 		tileGrid[i] = values;
 		moveGrid.push([]);
 		for (var j=0;j<values.length;j++) {
-			//console.log("I; " + i + " " + j);
 			//tileGrid[i][j] = values[j];
-			if (blockProps[values[j]].solid) {
+			if (tileTypes[values[j]].solid) {
 				moveGrid[i].push(1);
 			} else {
 				moveGrid[i].push(0);
@@ -193,31 +231,16 @@ function loadMap(xml) {
 
 function drawTiles() {
 	
-	/*
-	$("<style type='text/css'>").appendTo("head");
-	for (var i=0;i<tileGrid.length;i++) {
-		for (var j=0;j<tileGrid[i].length;j++) {
-			if (tileGrid[i][j] > 0) {
-				$(".column-" + i + ".row-" + j).css("background-image", "url('t-" + tileGrid[i][j] + ".png')");
-				if (blockProps[tileGrid[i][j]].z > 0)
-					$(".column-" + i + ".row-" + j).css("z-index", blockProps[tileGrid[i][j]].z);
-			}
-		}	
-	}
-	$("</style>").appendTo("head");
-	*/
-
 	PIXI.loader.load(function (loader, resources) {
 		for (var i=0;i<tileGrid.length;i++) {
 			for (var j=0;j<tileGrid[i].length;j++) {
 				var texture = new PIXI.Texture.fromImage('t-' + tileGrid[i][j] + '.png');
-				//var resourceName = 'resources.tile' + tileGrid[i][j] + '.textures';
 				var tile = new PIXI.Sprite(texture);
 				tile.position.x = i * tileSize + 2;
 				tile.position.y = j * tileSize + 2;
 				tile.scale.x = 1;
 				tile.scale.y = 1;
-				if (blockProps[tileGrid[i][j]].z == 0) {
+				if (tileTypes[tileGrid[i][j]].z == 0) {
 					tileLayer.addChild(tile);
 				} else {
 					overLayer.addChild(tile);
@@ -237,6 +260,10 @@ function drawTiles() {
 			entitySprites[i] = new PIXI.Sprite(texture);
 			entitySprites[i].position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;
 			entitySprites[i].position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
+			if (entities[i].hasOwnProperty('randomOffset')) {
+				entitySprites[i].position.x += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
+				entitySprites[i].position.y += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
+			}
 			entitySprites[i].scale.x = 1;
 			entitySprites[i].scale.y = 1;
 			entitySprites[i].anchor.x = 0.5;
@@ -251,25 +278,9 @@ function drawTiles() {
 			shadows[i].alpha = 0.3;
 			shadows[i]._tint = 0x000000;
 			shadows[i].filters = [colorMatrix,blurFilter];
-			//position = entityLayer.get
 			entityLayer.addChild(shadows[i]);
 			entityLayer.swapChildren(entitySprites[i], shadows[i]);
-			//shadowLayer.addChild(shadows[i]);
-			/*
-			$("#entity-layer").append("<div class='entity' id='entity-" + i +"'></div>");
-			$("#entity-" + i).append("<span class='aligner'></span>");
-			$("#entity-" + i).append("<img src='" + entities[i].sprite + "' />");
-			$("#entity-" + i).css("left", entities[i].posX * tileSize - 11);
-			$("#entity-" + i).css("top", entities[i].posY * tileSize - 11);
-			*/
 		}
-
-		/*		
-		shadowLayer = JSON.parse(JSON.stringify(entityLayer));
-		shadowLayer.position.x += 5;
-		shadowLayer.position.y += 5; 
-		shadowLayer.filters = [blurFilter];
-		*/
 
 		charSprite = new PIXI.Sprite(resources.charSprite.texture);
 
@@ -286,35 +297,10 @@ function drawTiles() {
 		highlightBox.visible = false;
 		highlightLayer.addChild(highlightBox);
 		
-	    // This creates a texture from a 'bunny.png' image.
-	    bunny = new PIXI.Sprite(resources.tile0.texture);
-	
-	    // Setup the position and scale of the bunny
-	    bunny.position.x = 200;
-	    bunny.position.y = 100;
-	
-	    bunny.scale.x = 0.5;
-	    bunny.scale.y = 0.5;
-	
-	    // Add the bunny to the scene we are building.
-	    stage.addChild(bunny);
-	
 	    // kick off the animation loop (defined below)
 	    animate();
 	});
 }
-
-/*
-function drawEntities() {
-	for (var i=0;i<entities.length;i++) {
-		$("#entity-layer").append("<div class='entity' id='entity-" + i +"'></div>");
-		$("#entity-" + i).append("<span class='aligner'></span>");
-		$("#entity-" + i).append("<img src='" + entities[i].sprite + "' />");
-		$("#entity-" + i).css("left", entities[i].posX * tileSize - 11);
-		$("#entity-" + i).css("top", entities[i].posY * tileSize - 11);
-	}
-}
-*/
 
 function moveChar(charX, charY) {
 	console.log("Moving to " + charX + "," + charY)
@@ -328,14 +314,13 @@ function moveChar(charX, charY) {
 		console.log("Out of bounds " + movePos[0] + "," + movePos[1]);
 		return;
 	}
-	if (blockProps[tileGrid[charX][charY]].solid) {
+	if (tileTypes[tileGrid[charX][charY]].solid) {
 		console.log("Solid at " + charX + "," + charY);
 		return;
 	}
 	if (updateEntities([charX,charY])) {
 		characterPos = [charX,charY];
 		console.log("Moved to " + characterPos[0] + "," + characterPos[1]);
-		redrawChar();
 	}
 }
 
@@ -351,7 +336,7 @@ function updateEntities(movePos) {
 					//showMessage("gold +" + entities[i].quantity);
 				//}
 				entities[i].active = false;
-
+				playSound('sounds/coins.mp3');
 			}
 			if (entityTypes[entities[i].type].name == "item") {
 				var itemQuantity = 1;
@@ -363,9 +348,11 @@ function updateEntities(movePos) {
 				//showMessage("item +" + entities[i].name);
 				addItem(entities[i].name, itemQuantity);
 				entities[i].active = false;
+				playSound('sounds/bag-open.mp3');
 
 			}
 			if (entityTypes[entities[i].type].name == "container") {
+				var opened = false;
 				if (entities[i].hasOwnProperty("item")) {
 					if (entities[i].hasOwnProperty("quantity")) {
 						addItem(entities[i].item, entities[i].quantity);
@@ -373,14 +360,24 @@ function updateEntities(movePos) {
 						addItem(entities[i].item);
 					}
 					delete entities[i].item;
+					opened = true;
 				}
 				if (entities[i].hasOwnProperty("gold")) {
 					addGold(entities[i].gold);
 					delete entities[i].gold;
+					opened = true;
 				}
 				//$("#entity-" + i + " img").attr("src", entities[i].sprite2);
 				var texture = new PIXI.Texture.fromImage(entities[i].sprite2);
 				entitySprites[i].texture = texture;
+				if (opened)
+					playSound('sounds/chest-open.mp3');
+			}
+			if (entityTypes[entities[i].type].name == "decor") {
+				playSound('sounds/crunch.mp3', 200);
+			}
+			if (entityTypes[entities[i].type].name == "npc") {
+				playSound('sounds/grunt.mp3', 200);
 			}
 			if (entityTypes[entities[i].type].solid) {
 				console.log(entities[i].posX + " " + entities[i].posY);
@@ -388,6 +385,14 @@ function updateEntities(movePos) {
 				tempGrid = [entities[i].posX, entities[i].posY];
 				movedChar = false;
 				doneMoving = true;
+			}
+			if (entities[i].hasOwnProperty('actions')) {
+				var actions = entities[i].actions;
+				for (var j=0;j<actions.length;j++) {
+					if (actions[j].trigger == 'interact') {
+						doAction(actions[j].action, entities[i].posX, entities[i].posY, actions[j].text)
+					}
+				}
 			}
 		}
 		if (!entities[i].active)
@@ -420,11 +425,6 @@ function addItem(name, quantity = 1) {
 	}
 }
 
-function redrawChar() {
-	$("#character").css("left", characterPos[0] * tileSize - 11);
-	$("#character").css("top", characterPos[1] * tileSize - 11);
-}
-
 function drawInv() {
 	$("#inventory").empty();
 	for(var i=0;i<inventory.length;i++) {
@@ -432,18 +432,14 @@ function drawInv() {
 	}
 }
 
-function showMessage(text) {
-	/*
-	$("#char-message").append("<div id='msg-" + msgID + "'>" + text + "</div>");
-	$('#msg-' + msgID).animate({
-        'marginTop' : "-=30px" //moves up
-    }, 1500);
-	$('#msg-' + msgID).fadeOut(1500, function() {
-            $(this).remove();
-	}); */
-	var text = new PIXI.Text(text,{fontFamily : 'Lucida Console, Monaco, monospace', fontSize: 12, fill : 0xDEDE39, align : 'center', dropShadow: true, dropShadowDistance: 1,});
-	text.position.x = charSprite.position.x;
-	text.position.y = charSprite.position.y;
+function showMessage(text, posX = charSprite.position.x, posY = charSprite.position.y, type = 1) {
+	var text;
+	if (type == 1) 
+		text = new PIXI.Text(text,{fontFamily : 'Lucida Console, Monaco, monospace', fontSize: 12, fill : 0xDEDE39, align : 'center', dropShadow: true, dropShadowDistance: 1,});
+	if (type == 2)
+		text = new PIXI.Text(text,{fontFamily : 'Arial, Gadget, sans-serif', fontSize: 16, fill : 0xFFFFFF, align : 'center', dropShadow: true, dropShadowDistance: 1,});
+	text.position.x = posX;
+	text.position.y = posY;
 	if (messages.length > 0) {
 		if (messages[messages.length - 1].position.y == charSprite.position.y) {
 			text.position.y = charSprite.position.y + 15;
@@ -453,7 +449,6 @@ function showMessage(text) {
 	text.anchor.y = 0.5;
 	messages.push(text);
 	stage.addChild(messages[messages.length - 1]);
-	msgID++;
 }
 
 function inspectTile(xPos, yPos) {
@@ -463,7 +458,7 @@ function inspectTile(xPos, yPos) {
 		}
 	}
 	var tileID = tileGrid[xPos][yPos];
-	console.log(blockProps[tileID].name + "(" + tileID + ") Solid: " + blockProps[tileID].solid)
+	console.log(tileTypes[tileID].name + "(" + tileID + ") Solid: " + tileTypes[tileID].solid)
 }
 
 function moveTo(xPos, yPos, entityID = null) {
@@ -473,8 +468,6 @@ function moveTo(xPos, yPos, entityID = null) {
 		var easystar = new EasyStar.js();
         easystar.setGrid(moveGrid);
         easystar.setAcceptableTiles([0]);
-        //console.log(characterPos[0] + " " + characterPos[1] + " " + xPos + " " + yPos);
-        //console.log(typeof characterPos[0] + " " + typeof characterPos[1] + " " + typeof xPos + " " + typeof yPos);
         
         //If next to solid entity, interact instead of pathfinding
         if (Math.abs(characterPos[0] - xPos) == 1 && characterPos[1] == yPos && checkForEntity(xPos, yPos)) {
@@ -522,13 +515,34 @@ function checkForEntity(x, y) {
 	return false;
 }
 
+function playSound(fileLoc, delay = 0) {
+	var audio = new Audio(fileLoc);
+	audio.volume = 0.5 + (getRandomInt(0, 5)/10);
+	audio.volume *= sound;
+	audio.playbackRate = 1 + ((getRandomInt(0, 4) - 2)/10);
+	setTimeout(function() { audio.play(); }, delay);
+	//audio.play();
+}
+
+function playMusic(fileLoc) {
+	music = new Audio(fileLoc);
+	music.loop = true;
+	if (getCookie('music') != 'mute')
+		music.play();
+}
+
+function doAction(type, x, y, text, repeat = false) {
+	if (type == "say") {
+		showMessage(text, x * tileSize + tileSize/2, y * tileSize, 2);
+	}
+}
+
 function animate() {
 	    // start the timer for the next animation loop
 	    requestAnimationFrame(animate);
 	
-	    // each frame we spin the bunny around a bit
-	    bunny.rotation += 0.01;
 	    //charSprite.rotation += 0.01;
+
 	    var charSpriteX = (charSprite.position.x - 2 - Math.round(tileSize/2))/tileSize;
 	    var charSpriteY = (charSprite.position.y - 2 - Math.round(tileSize/2))/tileSize;
 	    if (Math.abs(charSpriteX - characterPos[0]) > 0.01) {
@@ -575,8 +589,8 @@ function animate() {
 
 function resourceLoader() {
 	
-	// load the textures we need
-	for (var i=0;i<blockProps.length;i++) {
+	// Load all sprites (TODO: add entities controlling for duplicates)
+	for (var i=0;i<tileTypes.length;i++) {
 		PIXI.loader.add('tile' + i, 't-' + i + '.png');
 	}
 	//for (var i=0;i<entities.length;i++) {
@@ -584,4 +598,36 @@ function resourceLoader() {
 	//}
 	PIXI.loader.add('charSprite', 'fighter2.png');
 
+
+	//Load sounds TODO
+	
+}
+
+function getRandomInt(min, max) {
+  min = Math.ceil(min);
+  max = Math.floor(max);
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+// Modified from http://www.w3schools.com/js/js_cookies.asp (don't hate)
+function setCookie(cname, cvalue, years = 5) {
+    var d = new Date();
+    d.setTime(d.getTime() + (years*365*24*60*60*1000));
+    var expires = "expires="+d.toUTCString();
+    document.cookie = cname + "=" + cvalue + "; " + expires;
+}
+
+function getCookie(cname) {
+    var name = cname + "=";
+    var ca = document.cookie.split(';');
+    for(var i = 0; i < ca.length; i++) {
+        var c = ca[i];
+        while (c.charAt(0) == ' ') {
+            c = c.substring(1);
+        }
+        if (c.indexOf(name) == 0) {
+            return c.substring(name.length, c.length);
+        }
+    }
+    return "";
 }

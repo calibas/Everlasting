@@ -9,4 +9,32 @@
 2,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0
 2,0,0,0,0,0,0,0,2,0,0,4,0,0,0,0
 2,4,4,4,4,4,4,4,2,4,4,2,0,0,0,4</map>
+	<levelHeight>8</levelHeight>
+	<levelWidth>16</levelWidth>
+	<backgroundTile>0</backgroundTile>
+	<spawnX>4</spawnX>
+	<spawnY>6</spawnY>
+	<music>music/magical_theme.mp3</music>
+	<tileTypes>
+		<tileType index="0" name="Grass" solid="false" z="0" sprite="t-0.png" />
+		<tileType index="1" name="Rocks" solid="true" z="0" sprite="t-1.png" />
+		<tileType index="2" name="Wall" solid="true" z="0" sprite="t-2.png" />
+		<tileType index="3" name="Wall" solid="true" z="0" sprite="t-3.png" />
+		<tileType index="4" name="Wall" solid="true" z="101" sprite="t-4.png" />
+	</tileTypes>
+	<entities>
+		<entity posX="3" posY="3" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
+		<entity posX="3" posY="1" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
+		<entity posX="12" posY="0" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
+		<entity posX="14" posY="7" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
+		<entity posX="2" posY="4" sprite="gold-coins.png" type="0" name="Gold" quantity="7" active="true" randomOffset="8" />
+		<entity posX="4" posY="2" sprite="gold-coins.png" type="0" name="Gold" quantity="9" active="true" randomOffset="8" />
+		<entity posX="10" posY="1" sprite="chest-closed.png" sprite2="chest-open.png" type="1" name="Chest" item="key" quantity="1" gold="3" active="true" />
+		<entity posX="10" posY="6" sprite="dagger.png" type="2" name="Dagger" quantity="1" active="true" />
+		<entity posX="1" posY="6" sprite="kobold.png" type="3" name="Kobold Prisoner" quantity="1" active="true">
+			<actions>
+				<action trigger="interact" action="say" repeat="false">Hello!</action>
+			</actions>
+		</entity>
+	</entities>
 </nodes>

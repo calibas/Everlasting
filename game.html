@@ -15,15 +15,6 @@ body{
 	background-image: radial-gradient(farthest-corner at 50% 30% , rgb(33, 102, 120) 0%, rgb(11, 38, 42) 100%);
 	min-height: 100%;
 }
-.tile {
-	height:32px;
-	width:32px;
-	border-right:1px solid #444;
-	border-bottom:1px solid #444;
-	float:left;
-	background-size: 100% 100%;
-	position:relative;
-}
 #top-menu {
 	position:relative;
 	top:0px;
@@ -38,18 +29,22 @@ body{
     padding: 0;
     text-align: center;
 }
+#top-settings {
+  position:absolute;
+  top:0px;
+  right:0px;
+}
+#mute-music, #mute-sound {
+	display:inline-block;
+	padding:5px;
+}
+#mute-music img, #mute-sound img {
+  height:25px;
+  width:auto;
+}
 #game-area-wrapper {
-	margin:15px auto;
-}
-#game-area {
-	border-top:1px solid #444;
-	border-left:1px solid #444;
-	height:100%;
-	width:100%;
-}
-#tile-layer, #character-layer, #entity-layer, #top-layer {position:absolute;}
-#top-layer {
-	z-index:9999;
+	margin-top:15px;
+	text-align: center;
 }
 #input {
 	position: absolute;
@@ -57,68 +52,17 @@ body{
 	text-align: center;
 	bottom: 0px;
 }
-#character {
-	height:54px;
-	width:54px;
-	position:absolute;
-	text-align:center;
-	transition:all 0.2s linear;
-}
-#char-message {
-	position:absolute;
-	z-index:200;
-	color:yellow;
-	font-family:"Lucida Console", Monaco, monospace;
-	font-size:12px;
-}
-#character img {
-	vertical-align:middle;
-	position:relative;
-	z-index:100;
-}
-.entity {
-	height:54px;
-	width:54px;
-	position:absolute;
-	text-align:center;
-	transition:all 0.2s linear;
-}
-.entity img {
-	vertical-align:middle;
-	position:relative;
-	z-index:100;
-}
-.aligner {
-    display: inline-block;
-    height: 100%;
-    vertical-align: middle;
-}
-.highlight {
-    -webkit-box-shadow:inset 0px 0px 0px 1px #dede39;
-    -moz-box-shadow:inset 0px 0px 0px 1px #dede39;
-    box-shadow:inset 0px 0px 0px 1px #dede39;
-}
 </style>
 </head>
 <body>
 <div id="top-menu">
-	<h3></h3>
+  <div id="top-settings">
+	<div id="mute-sound"><img src="sound-icon.png" /></div>	
+	<div id="mute-music"><img src="music-icon.png" /></div>
+  </div>
+  <h3></h3>
 </div>
 <div id="game-area-wrapper">
-<!--
-<div id="game-area">
-<div id="tile-layer">
-	
-</div>
-<div id="entity-layer">
-	
-</div>
-<div id="character-layer">
-	<div id="character"><div id="char-message"></div><span class="aligner"></span></div>
-</div>
-<div id="top-layer"></div>
-</div>
--->
 </div>
 <div id="input">
 	<div id="stats"></div>

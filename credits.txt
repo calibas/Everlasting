@@ -1,10 +1,34 @@
 This game uses resources from the following sources:
 
-Treasure chests by Blarumyrran, CC0
-http://opengameart.org/content/treasure-chests-32x32-and-16x16
+Sprites:
+  Treasure chests by Blarumyrran, CC0
+  http://opengameart.org/content/treasure-chests-32x32-and-16x16
 
-Tile art by Hyptosis, CC-BY 3.0
-http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
+  Tile art by Hyptosis, CC-BY 3.0
+  http://opengameart.org/content/lots-of-free-2d-tiles-and-sprites-by-hyptosis
 
-AngBandTk tiles by David E. Gervais, CC-BY 3.0
-http://pousse.rapiere.free.fr/tome/tome-tiles.htm
+  AngBandTk tiles by David E. Gervais, CC-BY 3.0
+  http://pousse.rapiere.free.fr/tome/tome-tiles.htm
+
+
+Sounds:
+  Wet Snow Sound (crunch.mp3) by Iwan "qubodup" Gabovitch, CC0
+  http://opengameart.org/content/9-wet-snow-steps
+
+  Metal Latch (chest-open.mp3) by Stepahn, Public Domain
+  http://soundbible.com/1357-Metal-Latch.html
+
+  Coins (coins.mp3) by monotraum, CC0
+  https://www.freesound.org/people/monotraum/sounds/162192/
+
+  Paper Bag (bag-open.mp3) by nebulousflynn, CC-BY 3.0
+  http://www.freesound.org/people/Robinhood76/sounds/67267/
+  
+  Angry Grunt (grunt.mp3) by Rocotilos, CC0
+  http://www.freesound.org/people/Rocotilos/sounds/341489/
+  
+  
+  
+Music:
+  Magical Theme by remaxim, CC-BY 3.0
+  http://opengameart.org/content/magical-theme
