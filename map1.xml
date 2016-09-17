@@ -2,39 +2,47 @@
 <nodes>
 	<title>Old Prison</title>
 	<map>2,3,3,3,3,3,3,3,2,3,3,2,0,0,0,0
-2,0,0,0,0,0,0,0,2,0,0,2,0,0,0,0
-2,0,0,0,0,0,0,0,2,0,0,2,0,0,0,0
-2,0,0,0,0,0,0,0,0,0,0,2,0,0,0,0
-2,0,0,0,0,0,0,0,4,0,0,2,0,0,0,0
-2,0,0,0,0,0,0,0,2,0,0,0,0,0,0,0
-2,0,0,0,0,0,0,0,2,0,0,4,0,0,0,0
+2,5,5,5,5,5,5,5,2,5,5,2,0,0,0,0
+2,5,5,5,5,5,5,5,2,5,5,2,0,0,0,0
+2,5,5,5,5,5,5,5,5,5,5,2,0,0,0,0
+2,5,5,5,5,5,5,5,4,5,5,2,0,0,0,0
+2,5,5,5,5,5,5,5,2,5,5,5,0,0,0,0
+2,5,5,5,5,5,5,5,2,5,5,4,0,0,0,0
 2,4,4,4,4,4,4,4,2,4,4,2,0,0,0,4</map>
 	<levelHeight>8</levelHeight>
 	<levelWidth>16</levelWidth>
 	<backgroundTile>0</backgroundTile>
 	<spawnX>4</spawnX>
 	<spawnY>6</spawnY>
-	<music>music/magical_theme.mp3</music>
+	<music>music/Enchanted Festival.mp3</music>
 	<tileTypes>
-		<tileType index="0" name="Grass" solid="false" z="0" sprite="t-0.png" />
-		<tileType index="1" name="Rocks" solid="true" z="0" sprite="t-1.png" />
-		<tileType index="2" name="Wall" solid="true" z="0" sprite="t-2.png" />
-		<tileType index="3" name="Wall" solid="true" z="0" sprite="t-3.png" />
-		<tileType index="4" name="Wall" solid="true" z="101" sprite="t-4.png" />
+		<tileType index="0" name="grass" solid="false" z="0" sprite="tiles/hyptosis-grass.png" />
+		<tileType index="1" name="rocks" solid="true" z="0" sprite="tiles/hyptosis-stonewall.png" />
+		<tileType index="2" name="wall" solid="true" z="0" sprite="tiles/hyptosis-brickwall.png" />
+		<tileType index="3" name="wall" solid="true" z="0" sprite="tiles/hyptosis-brickwallstone.png" />
+		<tileType index="4" name="wall" solid="true" z="101" sprite="tiles/hyptosis-brickwalltop.png" />
+		<tileType index="5" name="stone floor" solid="false" z="0" sprite="tiles/hyptosis-stone-floor.png" />
 	</tileTypes>
 	<entities>
-		<entity posX="3" posY="3" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
-		<entity posX="3" posY="1" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
-		<entity posX="12" posY="0" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
-		<entity posX="14" posY="7" sprite="bush.png" type="4" name="Bush" quantity="1" active="true" randomOffset="8" />
-		<entity posX="2" posY="4" sprite="gold-coins.png" type="0" name="Gold" quantity="7" active="true" randomOffset="8" />
-		<entity posX="4" posY="2" sprite="gold-coins.png" type="0" name="Gold" quantity="9" active="true" randomOffset="8" />
-		<entity posX="10" posY="1" sprite="chest-closed.png" sprite2="chest-open.png" type="1" name="Chest" item="key" quantity="1" gold="3" active="true" />
-		<entity posX="10" posY="6" sprite="dagger.png" type="2" name="Dagger" quantity="1" active="true" />
-		<entity posX="1" posY="6" sprite="kobold.png" type="3" name="Kobold Prisoner" quantity="1" active="true">
+		<entity posX="15" posY="3" sprite="sprites/bush.png" solid="false" type="decor" name="bush" quantity="1" active="true" randomOffset="8" shadow="" sound="sounds/crunch.mp3" />
+		<entity posX="14" posY="1" sprite="sprites/bush.png" solid="false" type="decor" name="bush" quantity="1" active="true" randomOffset="8" shadow="" sound="sounds/crunch.mp3" />
+		<entity posX="12" posY="0" sprite="sprites/bush.png" solid="false" type="decor" name="bush" quantity="1" active="true" randomOffset="8" shadow="" sound="sounds/crunch.mp3" />
+		<entity posX="14" posY="7" sprite="sprites/bush.png" solid="false" type="decor" name="bush" quantity="1" active="true" randomOffset="8" shadow="" sound="sounds/crunch.mp3" />
+		<entity posX="6" posY="6" sprite="sprites/torch-fr1.png,sprites/torch-fr2.png,sprites/torch-fr3.png" solid="false" type="decor" name="torch" quantity="1" active="true" randomOffset="8" animate="true" />
+		<entity posX="2" posY="4" sprite="sprites/gold-coins.png" solid="false" type="gold" name="gold" quantity="7" active="true" randomOffset="8" />
+		<entity posX="4" posY="2" sprite="sprites/gold-coins.png" solid="false" type="gold" name="gold" quantity="9" active="true" randomOffset="8" />
+		<entity posX="10" posY="1" sprite="sprites/chest-closed.png" sprite2="sprites/chest-open.png" solid="true" type="container" name="chest" item="key" quantity="1" gold="3" active="true" />
+		<entity posX="10" posY="6" sprite="sprites/dagger.png" solid="false" type="item" name="dagger" quantity="1" active="true" shadow="true" />
+		<entity posX="1" posY="6" sprite="sprites/kobold.png" solid="true" type="npc" name="kobold prisoner" faction="kobold" hp="5" quantity="1" active="true" sound="sounds/grunt.mp3">
 			<actions>
-				<action trigger="interact" action="say" repeat="false">Hello!</action>
+				<action trigger="interact" action="say" repeat="false" active="true">Hello!</action>
 			</actions>
 		</entity>
-	</entities>
+		<entity posX="11" posY="5" sprite="sprites/door.png" sprite2="sprites/door2.png" solid="true" type="door" name="door" quantity="1" active="true" />
+		<entity posX="13" posY="7" sprite="sprites/skeleton.png" solid="true" type="npc" name="skeleton" faction="undead" hp="10" quantity="1" active="true" >
+			<actions>
+				<action trigger="entityNear" action="attack" repeat="true" active="true">1</action>
+			</actions>
+		</entity>
+		</entities>
 </nodes>

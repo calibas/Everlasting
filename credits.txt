@@ -10,6 +10,9 @@ Sprites:
   AngBandTk tiles by David E. Gervais, CC-BY 3.0
   http://pousse.rapiere.free.fr/tome/tome-tiles.htm
 
+  Dungeon Crawl Stone Soup, CC0
+  Part of (or All) the graphic tiles used in this program is the public domain roguelike tileset "RLTiles".
+  http://rltiles.sf.net
 
 Sounds:
   Wet Snow Sound (crunch.mp3) by Iwan "qubodup" Gabovitch, CC0
@@ -27,8 +30,19 @@ Sounds:
   Angry Grunt (grunt.mp3) by Rocotilos, CC0
   http://www.freesound.org/people/Rocotilos/sounds/341489/
   
+  Dorm door opening(opendoor.mp3) by PaganCow, CC0
+  https://www.freesound.org/people/pagancow/sounds/15419/
   
+  Doorclose (locked.mp3) by j1987, CC0
+  https://www.freesound.org/people/j1987/sounds/123006/
+  
+  Swish - bamboo stick(miss.mpg) by Iwan Gabovitch, CC0
+  http://opengameart.org/content/swish-bamboo-stick-weapon-swhoshes
   
 Music:
   Magical Theme by remaxim, CC-BY 3.0
   http://opengameart.org/content/magical-theme
+
+  Enchanted Festival by Matthew Pablo, CC-BY 3.0
+  http://www.matthewpablo.com
+  http://opengameart.org/content/enchanted-festival

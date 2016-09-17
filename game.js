@@ -8,30 +8,30 @@ var tileGrid = [];
 var tempGrid = [];
 var moveGrid = [];
 
-var characterPos;
-var characterSprite = "fighter2.png";
+var character = {sprite:'sprites/fighter2.png', name:'Shanna', moveX:-1, moveY: -1, doneMoving: true, gold: 0, fame: 0, inventory: [], damage: 2, hp:15, faction: 'human', actions: []};
 
 // move or inspect on mouse click
 var mouseMode = "move"
 
 var loaded = false;
-var doneMoving = true;
 
-var gold = 0;
 var fame = 0;
 var inventory = [];
 
 var tileTypes = [];
 var entities = [];
 
+var actions = [];
+var events = [];
+/*
 var entityTypes = [];
 entityTypes[0] = {name:"gold", solid: false};
 entityTypes[1] = {name:"container", solid: true};
 entityTypes[2] = {name:"item", solid: false};
 entityTypes[3] = {name:"npc", solid:true};
 entityTypes[4] = {name:"decor", solid:false};
-
-var tempSolid = [];
+entityTypes[5] = {name:"door", solid:true};
+*/
 
 var renderer = new PIXI.autoDetectRenderer(2 * tileSize , 2 * tileSize, {backgroundColor:"0x444444"});
 renderer.roundPixels = true;
@@ -41,23 +41,19 @@ var highlightLayer = new PIXI.Container();
 var entityLayer = new PIXI.Container();
 var charLayer = new PIXI.Container();
 var overLayer = new PIXI.Container();
+var messages = new PIXI.Container();
 stage.addChild(tileLayer);
 stage.addChild(highlightLayer);
 stage.addChild(entityLayer);
 stage.addChild(charLayer);
 stage.addChild(overLayer);
+overLayer.addChild(messages);
 
-//var bunny = null;
-var charSprite = null;
 var highlightBox = new PIXI.Graphics();
-var entitySprites = [];
-var shadows = [];
-var messages = [];
 
 var music;
 var sound = 1;
-
-resourceLoader();
+var sounds = {};
 
 $(document).ready(function(){
 	
@@ -77,21 +73,25 @@ $(document).ready(function(){
 	
 	//Make arrow keys move character
 	$(window).keypress(function(e) {
-	  if (loaded && doneMoving) {
+	  if (loaded && character.moveX == -1) {
        	var ev = e || window.event;
        	var key = ev.keyCode || ev.which;
        	if (key == "38")
-       		moveChar(characterPos[0], characterPos[1] - 1);
+       		moveChar(character.x, character.y - 1);
 		if (key == "40")
-			moveChar(characterPos[0], characterPos[1] + 1);
+			moveChar(character.x, character.y + 1);
 		if (key == "37")
-			moveChar(characterPos[0] - 1, characterPos[1]);
+			moveChar(character.x - 1, character.y);
 		if (key == "39")
-			moveChar(characterPos[0] + 1, characterPos[1]);
+			moveChar(character.x + 1, character.y);
 	  }
 	});
 	
-	$("#game-area-wrapper canvas").mousedown(function(e){ e.preventDefault(); });
+	//$("#game-area-wrapper canvas").mousedown(function(e){ e.preventDefault(); });
+
+	$('#game-area-wrapper canvas').bind('contextmenu', function(e){
+    	return false;
+	}); 
 
 	$("#game-area-wrapper canvas").click(function(e){
 		var xClickPos = Math.floor((e.pageX - this.offsetLeft) / tileSize);
@@ -102,8 +102,10 @@ $(document).ready(function(){
     		yClickPos--;
 		console.log("x: " + xClickPos + "y: " + yClickPos);
 		inspectTile(xClickPos, yClickPos);
-		if (doneMoving) {
-			moveTo(xClickPos, yClickPos);
+		if (character.moveX == -1) {
+			//findPath(xClickPos, yClickPos);
+			character.moveX = xClickPos;
+			character.moveY = yClickPos;
 			highlightBox.position.x = xClickPos * tileSize;
 			highlightBox.position.y = yClickPos * tileSize - 1;
 			highlightBox.visible = true;
@@ -143,13 +145,15 @@ function loadMap(xml) {
 	playMusic($(xml).find('music').text());
 
 	//Set spawn point
-	var spawnX = parseInt($(xml).find('spawnX').text());
-	var spawnY = parseInt($(xml).find('spawnY').text());
-	characterPos = [spawnX,spawnY];
+	var spawnX = parseInt($(xml).find('spawnX').text(), 10);
+	var spawnY = parseInt($(xml).find('spawnY').text(), 10);
+	//characterPos = [spawnX,spawnY];
+	character.x = spawnX;
+	character.y = spawnY;
 	
 	//Load entities
 	var boolTypes = ['solid','active'];
-	var intTypes = ['quantity','gold'];
+	var intTypes = ['quantity','gold', 'posX', 'posY'];
 	$(xml).find('entities').children().each(function(i) {
 		var entity = {};
 		entity.actions = []
@@ -162,7 +166,7 @@ function loadMap(xml) {
      			else
      				entity[name] = false;
      		} else if (intTypes.indexOf(name) != -1) {
-     			entity[name] = parseInt(value);
+     			entity[name] = parseInt(value, 10);
      		} else {
      			entity[name] = value;
      		}
@@ -175,6 +179,9 @@ function loadMap(xml) {
      			action[attrib.name] = attrib.value;
      		});
 			//var action
+			if (action.trigger == "entityNear") {
+				new Action(entity, "entityNear", null, action.text, true);
+			}
 			entity['actions'].push(action);
 		});
 		entities.push(entity);
@@ -192,7 +199,7 @@ function loadMap(xml) {
      			else
      				tileType[name] = false;
 			} else if (intTypes.indexOf(name) != -1) {
-     			tileType[name] = parseInt(value);
+     			tileType[name] = parseInt(value, 10);
      		} else {
      			tileType[name] = value;
      		}
@@ -223,9 +230,12 @@ function loadMap(xml) {
   		})
 	});
 	tileGrid = newArray;
+	resourceLoader();
 	drawTiles();
 	//drawEntities();
-	$("#gold-count").text(gold);
+	$("#gold-count").text(character.gold);
+	GameTimer.registerService(eachTick);
+	GameTimer.domReady();
 	loaded = true;
 }
 
@@ -234,12 +244,23 @@ function drawTiles() {
 	PIXI.loader.load(function (loader, resources) {
 		for (var i=0;i<tileGrid.length;i++) {
 			for (var j=0;j<tileGrid[i].length;j++) {
-				var texture = new PIXI.Texture.fromImage('t-' + tileGrid[i][j] + '.png');
+				var colorMatrix = new PIXI.filters.ColorMatrixFilter();
+ 				//Add slight random +/- contrast to tiles
+ 				colorMatrix.contrast((getRandomInt(0,10))/100, true);
+ 				//colorMatrix.hue(getRandomInt(0,6)-3, true);
+				var texture = new PIXI.Texture.fromImage(tileTypes[tileGrid[i][j]].sprite);
 				var tile = new PIXI.Sprite(texture);
-				tile.position.x = i * tileSize + 2;
-				tile.position.y = j * tileSize + 2;
+				tile.position.x = i * tileSize + Math.abs(tileSize/2) + 2;
+				tile.position.y = j * tileSize + Math.abs(tileSize/2) + 2;
 				tile.scale.x = 1;
 				tile.scale.y = 1;
+				tile.anchor.x = 0.5;
+				tile.anchor.y = 0.5;
+				if (tileTypes[tileGrid[i][j]].hasOwnProperty("randomrotate")) {
+					rotateDeg = getRandomInt(0,3) * 90;
+					tile.rotation = rotateDeg * Math.PI / 180;
+				}
+				tile.filters = [colorMatrix];
 				if (tileTypes[tileGrid[i][j]].z == 0) {
 					tileLayer.addChild(tile);
 				} else {
@@ -256,41 +277,64 @@ function drawTiles() {
  		colorMatrix.brightness(0);
 		
 		for (var i=0;i<entities.length;i++) {
-			var texture = new PIXI.Texture.fromImage(entities[i].sprite);
-			entitySprites[i] = new PIXI.Sprite(texture);
-			entitySprites[i].position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;
-			entitySprites[i].position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
-			if (entities[i].hasOwnProperty('randomOffset')) {
-				entitySprites[i].position.x += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
-				entitySprites[i].position.y += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
+			entities[i].spriteContainer = new PIXI.Container();
+			if (entities[i].hasOwnProperty('animate')) {
+				console.log("animating " + entities[i].name);
+				var frames = entities[i].sprite.split(',');
+				var textures = [];
+				for (var f=0;f<frames.length;f++) {
+					textures.push(PIXI.Texture.fromFrame(frames[f]));
+				}
+				//var texture = new PIXI.Texture.fromImage(entities[i].sprite);
+				//entitySprite = new PIXI.Sprite(texture);
+				//frames.push(PIXI.Texture.fromFrame('rollSequence00' + val + '.png'));
+				entitySprite = new PIXI.extras.MovieClip(textures);
+				entitySprite.animationSpeed = 0.1;
+				entitySprite.play();
+			} else {
+				var texture = new PIXI.Texture.fromImage(entities[i].sprite);
+				entitySprite = new PIXI.Sprite(texture);
 			}
-			entitySprites[i].scale.x = 1;
-			entitySprites[i].scale.y = 1;
-			entitySprites[i].anchor.x = 0.5;
-			entitySprites[i].anchor.y = 0.5;
+			entitySprite.position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;
+			entitySprite.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
+			if (entities[i].hasOwnProperty('randomOffset')) {
+				entitySprite.position.x += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
+				entitySprite.position.y += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
+			}
+			entitySprite.scale.x = 1;
+			entitySprite.scale.y = 1;
+			entitySprite.anchor.x = 0.5;
+			entitySprite.anchor.y = 0.5;
 			//shadows[i] = entitySprites[i];
-			entityLayer.addChild(entitySprites[i]);
-			shadows[i] = new PIXI.Sprite(texture);
-			shadows[i].position.x = entitySprites[i].position.x;
-			shadows[i].position.y = entitySprites[i].position.y + 5;
-			shadows[i].anchor.x = 0.5;
-			shadows[i].anchor.y = 0.5;
-			shadows[i].alpha = 0.3;
-			shadows[i]._tint = 0x000000;
-			shadows[i].filters = [colorMatrix,blurFilter];
-			entityLayer.addChild(shadows[i]);
-			entityLayer.swapChildren(entitySprites[i], shadows[i]);
+			//entityLayer.addChild(entitySprites[i]);
+			if (entities[i].hasOwnProperty('shadow')) {
+				shadow = new PIXI.Sprite(texture);
+				shadow.position.x = entitySprite.position.x;
+				shadow.position.y = entitySprite.position.y + 5;
+				shadow.anchor.x = 0.5;
+				shadow.anchor.y = 0.5;
+				shadow.alpha = 0.3;
+				shadow._tint = 0x000000;
+				shadow.filters = [colorMatrix,blurFilter];
+				entities[i].shadow = shadow;
+				entities[i].spriteContainer.addChild(entities[i].shadow);
+			}
+			//entityLayer.addChild(shadows[i]);
+			//entityLayer.swapChildren(entitySprites[i], shadows[i]);\
+			entities[i].spriteObj = entitySprite;
+			entities[i].spriteContainer.addChild(entities[i].spriteObj);
+			entityLayer.addChild(entities[i].spriteContainer);
 		}
+		var texture = new PIXI.Texture.fromImage(character.sprite);
+		character.spriteObj = new PIXI.Sprite(texture);
 
-		charSprite = new PIXI.Sprite(resources.charSprite.texture);
-
-		charSprite.position.x = characterPos[0] * tileSize + Math.round(tileSize/2) + 2;
-	    charSprite.position.y = characterPos[1] * tileSize + Math.round(tileSize/2) + 2;
+		character.spriteObj.position.x = character.x * tileSize + Math.round(tileSize/2) + 2;
+	    character.spriteObj.position.y = character.y * tileSize + Math.round(tileSize/2) + 2;
 	    
-	    charSprite.anchor.x = 0.5;
-	    charSprite.anchor.y = 0.5;
+	    character.spriteObj.anchor.x = 0.5;
+	    character.spriteObj.anchor.y = 0.5;
 	    
-	    charLayer.addChild(charSprite);
+	    charLayer.addChild(character.spriteObj);
 
 		highlightBox.lineStyle(1, 0xDEDE39);
 		highlightBox.drawRect(2, 2, tileSize, tileSize);
@@ -302,34 +346,39 @@ function drawTiles() {
 	});
 }
 
-function moveChar(charX, charY) {
-	console.log("Moving to " + charX + "," + charY)
+function moveChar(moveX, moveY) {
+	console.log("Moving to " + moveX + "," + moveY)
 	if (!loaded)
 		return;
-	if (charY < 0 || charX < 0) {
-		console.log("Out of bounds " + movePos[0] + "," + movePos[1]);
+	if (moveY < 0 || moveX < 0) {
+		console.log("Out of bounds!");
 		return;
 	}
-	if (charY >= levelHeight || charX >= levelWidth) {
-		console.log("Out of bounds " + movePos[0] + "," + movePos[1]);
+	if (moveY >= levelHeight || moveX >= levelWidth) {
+		console.log("Out of bounds!");
 		return;
 	}
-	if (tileTypes[tileGrid[charX][charY]].solid) {
-		console.log("Solid at " + charX + "," + charY);
+	if (tileTypes[tileGrid[moveX][moveY]].solid) {
+		console.log("Solid at " + moveX + "," + moveY);
 		return;
 	}
-	if (updateEntities([charX,charY])) {
-		characterPos = [charX,charY];
-		console.log("Moved to " + characterPos[0] + "," + characterPos[1]);
+	if (entityIneract([moveX,moveY])) {
+		character.x = moveX;
+		character.y = moveY;
+		console.log("Moved to " + character.x + "," + character.y);
+		if (character.x == character.moveX && character.y == character.moveY) {
+			character.moveX = -1;
+		}
 	}
 }
 
-function updateEntities(movePos) {
+function entityIneract(movePos) {
+	//Returns false if character movement blocked
 	var movedChar = true;
 	for (var i=0;i<entities.length;i++) {
 		if (entities[i].posX == movePos[0] && entities[i].posY == movePos[1] && entities[i].active) {
 			console.log("Entity interaction!");
-			if (entityTypes[entities[i].type].name == "gold") {
+			if (entities[i].type == "gold") {
 				addGold(entities[i].quantity);
 				//if (entities[i].name == "Gold") {
 					//gold = gold + entities[i].quantity;
@@ -338,7 +387,7 @@ function updateEntities(movePos) {
 				entities[i].active = false;
 				playSound('sounds/coins.mp3');
 			}
-			if (entityTypes[entities[i].type].name == "item") {
+			if (entities[i].type == "item") {
 				var itemQuantity = 1;
 				if (entities[i].hasOwnProperty("quantity")) {
 					itemQuantity = entities[i].quantity;
@@ -351,7 +400,7 @@ function updateEntities(movePos) {
 				playSound('sounds/bag-open.mp3');
 
 			}
-			if (entityTypes[entities[i].type].name == "container") {
+			if (entities[i].type == "container") {
 				var opened = false;
 				if (entities[i].hasOwnProperty("item")) {
 					if (entities[i].hasOwnProperty("quantity")) {
@@ -369,60 +418,120 @@ function updateEntities(movePos) {
 				}
 				//$("#entity-" + i + " img").attr("src", entities[i].sprite2);
 				var texture = new PIXI.Texture.fromImage(entities[i].sprite2);
-				entitySprites[i].texture = texture;
+				entities[i].spriteObj.texture = texture;
 				if (opened)
 					playSound('sounds/chest-open.mp3');
 			}
-			if (entityTypes[entities[i].type].name == "decor") {
-				playSound('sounds/crunch.mp3', 200);
+			if (entities[i].type == "decor") {
+				if (entities[i].hasOwnProperty("sound"))
+					playSound(entities[i].sound, 200);
 			}
-			if (entityTypes[entities[i].type].name == "npc") {
-				playSound('sounds/grunt.mp3', 200);
+			if (entities[i].type == "npc") {
+				if (entities[i].hasOwnProperty("sound"))
+					playSound(entities[i].sound, 200);
+				if (isHostile(entities[i].faction, character.faction)) {
+					new Action(character, "attack", entities[i], null, true);
+					//new Action(entities[i], "attack", character, null, true);
+					//attack(entities[i], character);
+				}
 			}
-			if (entityTypes[entities[i].type].solid) {
-				console.log(entities[i].posX + " " + entities[i].posY);
+			if (entities[i].type == "door") {
+				if(checkInventory("key", true)) {
+					var texture = new PIXI.Texture.fromImage(entities[i].sprite2);
+					entities[i].spriteObj.texture = texture;
+					entities[i].solid = false;
+					movedChar = false;
+					//character.doneMoving = true;
+					character.moveX = -1;
+					playSound('sounds/opendoor.mp3');
+				} else if (entities[i].solid == true){
+					playSound('sounds/locked.mp3');
+				}
+			}
+			if (entities[i].solid) {
+				console.log("solid at: " + entities[i].posX + " " + entities[i].posY);
 				moveGrid[entities[i].posY][entities[i].posX] = 1;
 				tempGrid = [entities[i].posX, entities[i].posY];
 				movedChar = false;
-				doneMoving = true;
+				//character.doneMoving = true;
+				character.moveX = -1;
 			}
 			if (entities[i].hasOwnProperty('actions')) {
 				var actions = entities[i].actions;
 				for (var j=0;j<actions.length;j++) {
 					if (actions[j].trigger == 'interact') {
-						doAction(actions[j].action, entities[i].posX, entities[i].posY, actions[j].text)
+						doAction(actions[j].action, entities[i].posX, entities[i].posY, entities[i], actions[j].text)
 					}
 				}
 			}
 		}
-		if (!entities[i].active)
-			$("#entity-" + i).fadeOut();
+		if (!entities[i].active) {
+			moveGrid[entities[i].posY][entities[i].posX] = 0;
+			//$("#entity-" + i).fadeOut();
+		}
 			
 	}
 	return movedChar;
 }
 
-function isSolid(tileID) {
-	if(tileID == 1 || tileID == 2 || tileID == 3)
-		return true;
-	return false;
+function attack(actionIndex) {
+	console.log("Attacking!");
+	var action = actions[actionIndex];
+	var roll = getRandomInt(1,20);
+	var attackSkill = action.entity.attackSkill || 1;
+	var defense = action.target.defense || 10;
+	var damage = action.entity.damage || 1;
+	var damageReduction = action.target.damageReduction || 0;
+	if (roll + attackSkill > defense) {
+		action.target.hp -= damage;
+		playSound("sounds/sword-strike.mp3");
+		showMessage("Hit for " + damage + ". " + action.target.hp + "hp left!");
+		showText("-" + damage, 0xDD0000, action.target.spriteObj.x, action.target.spriteObj.y - 10);
+		if (action.target.hp < 1) {
+			action.target.active = false;
+			//moveGrid[action.target.x][action.target.y] = 0;
+			showMessage(action.target.name + " died.");
+		}
+	} else {
+		playSound("sounds/miss.mp3");
+		showMessage("Miss!");
+		showText("miss", 0xDDDDDD, action.target.spriteObj.x, action.target.spriteObj.y - 10);
+	}
 }
 
 function addGold(amount, display = true) {
-	gold = gold + amount;
-	$("#gold-count").text(gold);
-	if (display)
-		showMessage("gold +" + amount);
+	character.gold += amount;
+	$("#gold-count").text(character.gold);
+	if (display) {
+		showMessage("Added " + amount + " gold", 2);
+		showText(amount + " gold", 0xDEDE39, character.spriteObj.position.x, character.spriteObj.position.y);
+	}
 }
 
 function addItem(name, quantity = 1) {
 	inventory.push({name: name, quantity: quantity});
 	drawInv();
 	if (quantity > 1) {
-		showMessage("item +" + name + "x" + quantity);
+		showMessage("Picked up " + name + " x" + quantity, 2);
+		showText(name + " x" + quantity, 0xDEDE39, character.spriteObj.position.x, character.spriteObj.position.y + 15);
 	} else {
-		showMessage("item +" + name);
+		showMessage("Picked up " + name, 2);
+		showText(name, 0xDEDE39, character.spriteObj.position.x, character.spriteObj.position.y + 15);
 	}
+}
+
+function checkInventory(itemName, remove = false) {
+	for (var i=0;i<inventory.length;i++) {
+    	if (inventory[i].name == itemName) {
+    		if (remove) {
+    			inventory.splice(i, 1);
+    			showMessage('Removed ' + itemName, 2);
+    			drawInv();
+    		}
+    		return true;
+    	}
+  	}
+  	return false;
 }
 
 function drawInv() {
@@ -432,7 +541,14 @@ function drawInv() {
 	}
 }
 
-function showMessage(text, posX = charSprite.position.x, posY = charSprite.position.y, type = 1) {
+function showMessage(text, type = 1, posX = character.spriteObj.position.x, posY = character.spriteObj.position.y) {
+	text = text.charAt(0).toUpperCase() + text.slice(1);
+	var message = '<div>' + text +'</div>';
+	if (type == 2)
+		message = '<div style="color:rgb(255, 255, 121);">' + text +'</div>';
+	$('#message-log').append(message);
+	$('#message-log').scrollTop($('#message-log')[0].scrollHeight);
+	/*
 	var text;
 	if (type == 1) 
 		text = new PIXI.Text(text,{fontFamily : 'Lucida Console, Monaco, monospace', fontSize: 12, fill : 0xDEDE39, align : 'center', dropShadow: true, dropShadowDistance: 1,});
@@ -449,6 +565,16 @@ function showMessage(text, posX = charSprite.position.x, posY = charSprite.posit
 	text.anchor.y = 0.5;
 	messages.push(text);
 	stage.addChild(messages[messages.length - 1]);
+	*/
+}
+
+function showText(text, color = 0xDEDE39, posX = character.spriteObj.position.x, posY = character.spriteObj.position.y) {
+	var message = new PIXI.Text(text,{fontFamily : 'Lucida Console, Monaco, monospace', fontSize: 14, fill : color, align : 'center', dropShadow: true, dropShadowDistance: 2,});
+	message.position.x = posX;
+	message.position.y = posY;
+	message.anchor.x = 0.5;
+	message.anchor.y = 0.5;
+	messages.addChild(message);
 }
 
 function inspectTile(xPos, yPos) {
@@ -461,7 +587,7 @@ function inspectTile(xPos, yPos) {
 	console.log(tileTypes[tileID].name + "(" + tileID + ") Solid: " + tileTypes[tileID].solid)
 }
 
-function moveTo(xPos, yPos, entityID = null) {
+function findPath(xPos, yPos, entityID = null) {
 	if (entityID) {
 		//get entityPos
 	} else {
@@ -470,32 +596,39 @@ function moveTo(xPos, yPos, entityID = null) {
         easystar.setAcceptableTiles([0]);
         
         //If next to solid entity, interact instead of pathfinding
-        if (Math.abs(characterPos[0] - xPos) == 1 && characterPos[1] == yPos && checkForEntity(xPos, yPos)) {
+        if (Math.abs(character.x - xPos) == 1 && character.y == yPos && checkForEntity(xPos, yPos)) {
         	moveChar(xPos, yPos);
+        	character.moveX = -1;
         	return;
         }
-        if (Math.abs(characterPos[1] - yPos) == 1 && characterPos[0] == xPos && checkForEntity(xPos, yPos)) {
+        if (Math.abs(character.y - yPos) == 1 && character.x == xPos && checkForEntity(xPos, yPos)) {
         	moveChar(xPos, yPos);
+        	character.moveX = -1;
         	return;
         }
-        easystar.findPath(characterPos[0], characterPos[1], xPos, yPos, function( path ) {
+        easystar.findPath(character.x, character.y, xPos, yPos, function( path ) {
         	try {
         		if (path[1] != null) {
         			moveChar(path[1].x, path[1].y);
-        			doneMoving = false;
+        		} else {
+        			character.moveX = -1;
+        			return;
         		}
         	}
         	catch(err) {
         		console.log('Invalid path;');
+        		character.moveX = -1;
         		return;
         	}
-       		if (path[2] != null && !doneMoving) {
-    			setTimeout( function() {
-    				moveTo(xPos, yPos);
-  				}, 200);
+        	/*
+       		if (path[2] != null && !character.doneMoving) {
+    			//setTimeout( function() {
+    			//	findPath(xPos, yPos);
+  				//}, 200);
   			} else {
-  				doneMoving = true;
-  			}
+  				character.doneMoving = true;
+  				character.moveX = -1;
+  			} */
 		});
 		easystar.calculate();
 		if (tempGrid.length > 0) {
@@ -506,22 +639,40 @@ function moveTo(xPos, yPos, entityID = null) {
 }
 
 function checkForEntity(x, y) {
-	console.log("Checking...!");
+	//console.log("Checking...!");
 	for (var i=0;i<entities.length;i++) {
-		if (entities[i].posX == x && entities[i].posY == y && entities[i].active && entityTypes[entities[i].type].solid) {
-			return true;
+		if (entities[i].posX == x && entities[i].posY == y && entities[i].active && entities[i].solid) {
+			return entities[i];
 		}
+	}
+	if (character.x == x && character.y == y) {
+			return character;
 	}
 	return false;
 }
 
+function isHostile(faction, ownFaction) {
+	if (faction == "undead")
+		return true;
+	if (ownFaction == "undead")
+		return true;
+	return false;
+}
+
 function playSound(fileLoc, delay = 0) {
-	var audio = new Audio(fileLoc);
-	audio.volume = 0.5 + (getRandomInt(0, 5)/10);
-	audio.volume *= sound;
-	audio.playbackRate = 1 + ((getRandomInt(0, 4) - 2)/10);
-	setTimeout(function() { audio.play(); }, delay);
-	//audio.play();
+	if (sounds.hasOwnProperty(fileLoc)) {
+		console.log("Playing cached sound.")
+		sounds[fileLoc].volume = 0.5 + (getRandomInt(0, 5)/10);
+		sounds[fileLoc].volume *= sound;
+		sounds[fileLoc].playbackRate = 1 + ((getRandomInt(0, 4) - 2)/10);
+		setTimeout(function() { sounds[fileLoc].play(); }, delay);
+	} else {
+		var audio = new Audio(fileLoc);
+		audio.volume = 0.5 + (getRandomInt(0, 5)/10);
+		audio.volume *= sound;
+		audio.playbackRate = 1 + ((getRandomInt(0, 4) - 2)/10);
+		setTimeout(function() { audio.play(); }, delay);
+	}
 }
 
 function playMusic(fileLoc) {
@@ -531,9 +682,36 @@ function playMusic(fileLoc) {
 		music.play();
 }
 
-function doAction(type, x, y, text, repeat = false) {
+var Action = function(entity, type, target = null, data = null, repeat = false) {
+	this.entity = entity;
+	this.target = target;
+	this.type = type;
+	this.data = data;
+	this.repeat = repeat;
+	this.lastRun = 0;
+	this.active = true;
+
+	actions.push(this);
+}
+
+var EntityAction = function(entityID, type, target = null, data = null, repeat = false) {
+	this.entity = entity;
+	this.target = target;
+	this.type = type;
+	this.data = data;
+	this.repeat = repeat;
+	this.lastRun = 0;
+	this.active = true;
+
+	entities[entityID].actions.push(this);
+}
+
+function doAction(type, x, y, entity = null, text = '', repeat = false) {
 	if (type == "say") {
-		showMessage(text, x * tileSize + tileSize/2, y * tileSize, 2);
+		if (entity)
+			showMessage(entity.name + ': ' + text);
+		else
+			showMessage(text);
 	}
 }
 
@@ -543,34 +721,38 @@ function animate() {
 	
 	    //charSprite.rotation += 0.01;
 
-	    var charSpriteX = (charSprite.position.x - 2 - Math.round(tileSize/2))/tileSize;
-	    var charSpriteY = (charSprite.position.y - 2 - Math.round(tileSize/2))/tileSize;
-	    if (Math.abs(charSpriteX - characterPos[0]) > 0.01) {
-	    	charSprite.position.x += (characterPos[0] - charSpriteX) * 4.0;
-	    	//console.log('Moving x: ' + (characterPos[0] - charSpriteX));
-	    	//console.log(characterPos[0] + ' ' + charSpriteX);
-	    	//charSprite.position.x = Math.round(charSprite.position.x);
-	    } else if (charSprite.position.x != characterPos[0] * tileSize + Math.round(tileSize/2) + 2) {
-	    	charSprite.position.x = characterPos[0] * tileSize + Math.round(tileSize/2) + 2;
+	    var charSpriteX = (character.spriteObj.position.x - 2 - Math.round(tileSize/2))/tileSize;
+	    var charSpriteY = (character.spriteObj.position.y - 2 - Math.round(tileSize/2))/tileSize;
+	    //if (Math.abs(charSpriteX - character.x) > 0.01) {
+	    //	character.spriteObj.position.x += (character.x - charSpriteX) * 4.0;
+	    //}// else if (character.spriteObj.position.x != character.x * tileSize + Math.round(tileSize/2) + 2) {
+	    //	character.spriteObj.position.x = character.x * tileSize + Math.round(tileSize/2) + 2;
+	    //}
+	    if (charSpriteX != character.x) {
+	    	character.spriteObj.position.x += (character.x - charSpriteX) * 4.0;
 	    }
-	    
-	    if (charSpriteY != characterPos[1]) {
-	    	charSprite.position.y += (characterPos[1] - charSpriteY) * 4.0;
-	    	//console.log('Moving y: ' + (characterPos[1] - charSpriteY));
-	    	//charSprite.position.y = Math.round(charSprite.position.y);
+	    if (charSpriteY != character.y) {
+	    	character.spriteObj.position.y += (character.y - charSpriteY) * 4.0;
 	    }
 	    
 	    for (var i=0;i<entities.length;i++) {
-	    	if (entities[i].active == false && entitySprites[i].visible == true) {
-	    		entitySprites[i].alpha += -0.1;
-	    		shadows[i].alpha += -0.1;
-	    		if (entitySprites[i].alpha < 0.1) {
-	    			entitySprites[i].visible == false;
-	    			shadows[i].visible == false;
+	    	//Fade out inactive entities
+	    	if (entities[i].active == false && entities[i].spriteObj.visible == true) {
+	    		entities[i].spriteContainer.alpha += -0.1;
+	    		if (entities[i].spriteContainer.alpha < 0.1) {
+	    			entities[i].spriteContainer.visible == false;
 	    		}
 	    	}
 	    }
 	    
+	    for (var i=0;i<messages.children.length;i++) {
+	    	var message = messages.getChildAt(i);
+	    	message.alpha += -0.001 * (10/message.alpha);
+	    	if (message.alpha < 0.1) {
+				message.visible = false;
+			}
+	    }
+	    /* //Fade text
 	    for (var i=0;i<messages.length;i++) {
 			messages[i].alpha += -0.002 * (1/messages[i].alpha);
 			if (messages[i].alpha < 0.1) {
@@ -583,24 +765,206 @@ function animate() {
 				messages.splice(0,1);
 			}
 		}
+		*/
 	    // this is the main render call that makes pixi draw your container and its children.
 	    renderer.render(stage);
 }
 
-function resourceLoader() {
+
+//From http://stackoverflow.com/questions/7193011/javascript-game-loop-that-runs-at-the-same-speed/7193571#7193571
+var GameTimer = (function () {
+    var gameTimer = function (opts) {
+        var self = this;
+        opts = opts || {};
+        opts.stepInterval = opts.stepInterval || 200;
+
+        var callbacks = {};
+        var stepInterval= opts.stepInterval; // ms
+
+        this.domReady = function () {
+            setInterval(step, stepInterval);
+        };
+        
+        this.registerService = function(callback){
+            callbacks[callback] = callback;
+        };
+        
+        this.removeService = function(){
+            delete callbacks[callback];
+        };
+
+        var step = function () {
+            for(var id in callbacks){
+                callbacks[id]();
+            }
+        };
+    };
+
+    return new gameTimer;
+})();
+
+var eachTick = function(){
+    //console.log(new Date().getTime());
+    if (character.moveX != -1) {
+    	//character.x = character.moveX;
+    	//character.y = character.moveY;
+    	findPath(character.moveX, character.moveY);
+    }
+    
+    /*
+    for (var i=0;i<entities.length;i++) {
+    	if (entities[i].hasOwnProperty('actions')) {
+			var actions = entities[i].actions;
+			for (var j=0;j<actions.length;j++) {
+				if (actions[j].trigger == 'entityNear') {
+					var radius = actions[j].text;
+					for (var x = entities[i].x - radius; x < entites[i].x + radius; x++) {
+						for (var y = entities[i].y - radius; y < entites[i].y + radius; y++) {
+							if(check)
+						}
+					}
+					//doAction(actions[j].action, entities[i].posX, entities[i].posY, entities[i], actions[j].text)
+				}
+			}
+		}
+	} */
+    
+    for (var i=0;i<entities.length;i++) {
+    	if(entities[i].actions.length > 0) {
+    		runEntityActions(i);
+    	}
+    }
+    
+    runActions();
+    console.log(actions.length);
+    
+    for (var i=0;i<events.length;i++) {
+    
+    }
+};
+
+function runEntityActions(entityID) {
 	
-	// Load all sprites (TODO: add entities controlling for duplicates)
+}
+
+function runActions() {
+	for (var i=0;i<actions.length;i++) {
+		if (actions[i].active == false)
+			continue;
+		var currentTime = new Date().getTime();
+    	//console.log(actions[i].type);
+    	//console.log(currentTime - actions[i].lastRun);
+    	switch(actions[i].type) {
+    		case 'attack':
+    			if(actions[i].target.hp < 1 || actions[i].entity.hp < 1)
+    				actions[i].active = false;
+    			if(currentTime - actions[i].lastRun > 1000 && actions[i].active == true) {
+    				attack(i);
+    				actions[i].lastRun = currentTime;
+    			}
+    			break;
+    		case 'say':
+    		
+    			break;
+    		case 'entityNear':
+    			//console.log('entityNear');
+    			var radius = parseInt(actions[i].data,10);
+    			//console.log(radius + " " + actions[i].entity.posX + " " + actions[i].entity.posY);
+    			
+				for (var x = actions[i].entity.posX - radius; x <= actions[i].entity.posX + radius; x++) {
+					//console.log(x + " " + (actions[i].entity.posX + radius));
+					for (var y = actions[i].entity.posY - radius; y <= actions[i].entity.posY + radius; y++) {
+						//console.log(x + ' ' + y);
+						if(checkForEntity(x,y) && !(actions[i].entity.posY == y && actions[i].entity.posX == x)) {
+							target = checkForEntity(x,y);
+							if (isHostile(target.faction, actions[i].entity.faction)) {
+								new Action(actions[i].entity, "attack", target, null, true);
+								actions[i].active = false;
+							}
+						} 
+					}
+				} 
+    			break;
+    		default:
+    			console.log("Unknown action type!");
+    			break;
+    	}
+    }
+}
+
+function resourceLoader() {
+	var sprites = [];
 	for (var i=0;i<tileTypes.length;i++) {
-		PIXI.loader.add('tile' + i, 't-' + i + '.png');
+		if (sprites.indexOf(tileTypes[i].sprite) == -1) {
+			sprites.push(tileTypes[i].sprite);
+		}
 	}
+	for (var i=0;i<entities.length;i++) {
+		if (sprites.indexOf(entities[i].sprite) == -1 && !entities[i].hasOwnProperty('animate')) {
+			sprites.push(entities[i].sprite);
+		} else {
+			var frames = entities[i].sprite.split(",");
+			for (var f=0;f<frames.length;f++) {
+				if (sprites.indexOf(frames[f]) == -1) {
+					sprites.push(frames[f]);
+				}
+			}
+		}
+		if (entities[i].hasOwnProperty('sprite2')) {
+			if (sprites.indexOf(entities[i].sprite2) == -1) {
+				sprites.push(entities[i].sprite2);
+			}
+		}
+		if (entities[i].hasOwnProperty('sound')) {
+			//Preload entity sounds
+			cacheSound(entities[i].sound);
+			/*
+			if (!sounds.hasOwnProperty(entities[i].sound)) {
+				var audio = new Audio();
+    			audio.src = entities[i].sound;
+    			audio.preload = "auto";
+    			sounds[entities[i].sound] = audio;
+				//var entitySound = new sound();
+				//sounds.push(entitySound);
+				
+			} */
+		}
+	}
+	for (var i=0;i<sprites.length;i++) {
+		console.log(sprites[i]);
+		PIXI.loader.add(sprites[i]);
+	}
+	/*
+	PIXI.loader.add('sprites/torch-fr1.png');
+	PIXI.loader.add('sprites/torch-fr2.png');
+	PIXI.loader.add('sprites/torch-fr3.png');
+	*/
 	//for (var i=0;i<entities.length;i++) {
 	//	PIXI.loader.add(entities[i].sprite);
 	//}
-	PIXI.loader.add('charSprite', 'fighter2.png');
+	PIXI.loader.add(character.sprite);
 
 
 	//Load sounds TODO
-	
+	cacheSound('sounds/bag-open.mp3');
+	cacheSound('sounds/chest-open.mp3');
+	cacheSound('sounds/coins.mp3');
+	cacheSound('sounds/grunt.mp3');
+	cacheSound('sounds/opendoor.mp3');
+	cacheSound('sounds/locked.mp3');
+	cacheSound('sounds/miss.mp3');
+	cacheSound('sounds/sword-strike.mp3');
+}
+
+function cacheSound(fileLoc) {
+	if (!sounds.hasOwnProperty(fileLoc)) {
+		var audio = new Audio();
+		audio.src = fileLoc;
+		audio.preload = "auto";
+		sounds[fileLoc] = audio;
+		//var entitySound = new sound();
+		//sounds.push(entitySound);
+	}
 }
 
 function getRandomInt(min, max) {
@@ -609,7 +973,7 @@ function getRandomInt(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Modified from http://www.w3schools.com/js/js_cookies.asp (don't hate)
+// Modified from http://www.w3schools.com/js/js_cookies.asp
 function setCookie(cname, cvalue, years = 5) {
     var d = new Date();
     d.setTime(d.getTime() + (years*365*24*60*60*1000));
