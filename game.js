@@ -8,10 +8,10 @@ var tileGrid = [];
 var tempGrid = [];
 var moveGrid = [];
 
-var character = {sprite:'sprites/fighter2.png', name:'Shanna', moveX:-1, moveY: -1, doneMoving: true, gold: 0, fame: 0, inventory: [], damage: 2, hp:15, faction: 'human', actions: []};
+var characterID = 0;
 
 // move or inspect on mouse click
-var mouseMode = "move"
+var mouseMode = "move";
 
 var loaded = false;
 
@@ -23,15 +23,6 @@ var entities = [];
 
 var actions = [];
 var events = [];
-/*
-var entityTypes = [];
-entityTypes[0] = {name:"gold", solid: false};
-entityTypes[1] = {name:"container", solid: true};
-entityTypes[2] = {name:"item", solid: false};
-entityTypes[3] = {name:"npc", solid:true};
-entityTypes[4] = {name:"decor", solid:false};
-entityTypes[5] = {name:"door", solid:true};
-*/
 
 var renderer = new PIXI.autoDetectRenderer(2 * tileSize , 2 * tileSize, {backgroundColor:"0x444444"});
 renderer.roundPixels = true;
@@ -68,27 +59,43 @@ $(document).ready(function(){
 		$('#mute-sound img').css('opacity', 0.4);
 		sound = 0;
 	}
-		
-	$.ajax({url: "map1.xml", success: loadMap, cache: false});
+	
+	$.when (
+		$.getJSON('character.json', {}, function() {}),
+		$.getJSON('map1.json', {}, function() {})
+		//$.ajax({url: "map1.xml", success: function() {}, cache: false})
+	).done(function(arg1, arg2, arg3){
+    	loadCharacter(arg1);
+    	loadMapJson(arg2);
+    	//loadMap(arg3);
+	});
 	
 	//Make arrow keys move character
 	$(window).keypress(function(e) {
 	  if (loaded && character.moveX == -1) {
        	var ev = e || window.event;
        	var key = ev.keyCode || ev.which;
-       	if (key == "38")
-       		moveChar(character.x, character.y - 1);
-		if (key == "40")
-			moveChar(character.x, character.y + 1);
-		if (key == "37")
-			moveChar(character.x - 1, character.y);
-		if (key == "39")
-			moveChar(character.x + 1, character.y);
+       	if (key == "38") {
+       		entities[characterID].moveY = entities[characterID].posY - 1;
+       		entities[characterID].moveX = entities[characterID].posX;
+       	}
+		if (key == "40") {
+       		entities[characterID].moveY = entities[characterID].posY + 1;
+       		entities[characterID].moveX = entities[characterID].posX;
+       	}
+		if (key == "37") {
+       		entities[characterID].moveY = entities[characterID].posY;
+       		entities[characterID].moveX = entities[characterID].posX - 1;
+       	}
+		
+		if (key == "39") {
+       		entities[characterID].moveY = entities[characterID].posY;
+       		entities[characterID].moveX = entities[characterID].posX + 1;
+       	}
 	  }
 	});
 	
-	//$("#game-area-wrapper canvas").mousedown(function(e){ e.preventDefault(); });
-
+	//No right click on canvas (Add custom menu?)
 	$('#game-area-wrapper canvas').bind('contextmenu', function(e){
     	return false;
 	}); 
@@ -101,11 +108,11 @@ $(document).ready(function(){
     	if (yClickPos > levelHeight - 1)
     		yClickPos--;
 		console.log("x: " + xClickPos + "y: " + yClickPos);
+		//TODO: Optional inspect
 		inspectTile(xClickPos, yClickPos);
-		if (character.moveX == -1) {
-			//findPath(xClickPos, yClickPos);
-			character.moveX = xClickPos;
-			character.moveY = yClickPos;
+		if (entities[characterID].moveX == -1) {
+			entities[characterID].moveX = xClickPos;
+			entities[characterID].moveY = yClickPos;
 			highlightBox.position.x = xClickPos * tileSize;
 			highlightBox.position.y = yClickPos * tileSize - 1;
 			highlightBox.visible = true;
@@ -135,23 +142,119 @@ $(document).ready(function(){
 	});
 }); 
 
-function loadMap(xml) {
-	var title = $(xml).find('title').text();
-	$("#top-menu h3").text(title);
-	levelHeight = $(xml).find('levelHeight').text();
-	levelWidth = $(xml).find('levelWidth').text();
+var Entity = function(obj) {
+	this.name = obj.name || "Generic entity";
+	this.posX = obj.posX;
+	this.posY = obj.posY;
+	this.moveX = obj.moveX || -1;
+	this.moveY = obj.moveY || -1;
+	this.target = -1;
+	this.sprite = obj.sprite || null;
+	this.sprite2 = obj.sprite2 || null;
+	this.shadow = obj.shadow ? true : false;
+	//console.log(obj.shadow + " " + this.shadow);
+	this.solid = obj.solid ? true : false;
+	this.active = obj.active || true;
+	this.type = obj.type || "decor";
+	this.quantity = obj.quantity || 1;
+	this.randomOffset = obj.randomOffset || 0;
+	this.animate = obj.animate ? true : false;
+	this.sound = obj.sound || null;
+	this.item = obj.item || null;
+	this.gold = obj.gold || null;
+	this.faction = obj.faction || null;
+	this.hp = obj.hp || null;
+	this.actions = obj.actions || [];
+
+	entities.push(this);
+};
+
+function loadCharacter(json) {
+	//console.log(json[0]);
+	//character = json[0];
+	new Entity(json[0]);
+}
+
+function loadMapJson(json) {
+	$("#top-menu h3").text(json[0].title);
+	levelHeight = json[0].levelHeight;
+	levelWidth = json[0].levelWidth;
 	renderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);
-	backgroundTile = $(xml).find('backgroundTile').text();
-	playMusic($(xml).find('music').text());
+	backgroundTile = json[0].backgroundTile;
+	playMusic(json[0].music);
+	entities[characterID].posX = json[0].spawnX;
+	entities[characterID].posY = json[0].spawnY;
+	tileTypes = json[0].tileTypes;
+	tileGrid = json[0].tileMap;
+	//Invert tile grid
+	/*
+	var newArray = tileGrid[0].map(function(col, i) { 
+  		return tileGrid.map(function(row) { 
+    		return row[i]; 
+  		})
+	}); */
+	tileGrid = invertGrid(tileGrid);
+	for(var i=0;i<json[0].entities.length;i++) {
+		new Entity(json[0].entities[i]);
+	}
+	createMoveGrid();
+	resourceLoader();
+	drawTiles();
+	//drawEntities();
+	$("#gold-count").text(entities[characterID].gold);
+	GameTimer.registerService(eachTick);
+	GameTimer.domReady();
+	loaded = true;
+}
+
+function createMoveGrid() {
+	//var gridCopy = jQuery.extend(true, {}, tileGrid);
+	var gridCopy = JSON.parse(JSON.stringify(tileGrid));
+	for (var i=0;i<gridCopy.length;i++) {
+		for (var j=0;j<gridCopy[i].length;j++) {
+			//console.log(i + " " + j + " " + tileTypes[gridCopy[i][j]].solid);
+			if (tileTypes[gridCopy[i][j]].solid) {
+				gridCopy[i][j] = 1;
+			} else {
+				gridCopy[i][j] = 0;
+			}
+		}
+	} 
+	moveGrid = invertGrid(gridCopy);
+	console.log(moveGrid);
+	
+}
+
+function invertGrid(grid) {
+	var newGrid = grid[0].map(function(col, i) { 
+  		return grid.map(function(row) { 
+    		return row[i]; 
+  		})
+	});
+	return newGrid;
+}
+
+//function loadMap(xml) {
+	//var title = $(xml).find('title').text();
+	//$("#top-menu h3").text(title);
+	//levelHeight = $(xml).find('levelHeight').text();
+	//levelWidth = $(xml).find('levelWidth').text();
+	//renderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);
+	//backgroundTile = $(xml).find('backgroundTile').text();
+	//playMusic($(xml).find('music').text());
 
 	//Set spawn point
-	var spawnX = parseInt($(xml).find('spawnX').text(), 10);
-	var spawnY = parseInt($(xml).find('spawnY').text(), 10);
+	//var spawnX = parseInt($(xml).find('spawnX').text(), 10);
+	//var spawnY = parseInt($(xml).find('spawnY').text(), 10);
 	//characterPos = [spawnX,spawnY];
-	character.x = spawnX;
-	character.y = spawnY;
+	//character.x = spawnX;
+	//character.y = spawnY;
+	//entities[characterID].posX = spawnX;
+	//entities[characterID].posY = spawnY;
+	
 	
 	//Load entities
+	/*
 	var boolTypes = ['solid','active'];
 	var intTypes = ['quantity','gold', 'posX', 'posY'];
 	$(xml).find('entities').children().each(function(i) {
@@ -184,10 +287,13 @@ function loadMap(xml) {
 			}
 			entity['actions'].push(action);
 		});
-		entities.push(entity);
+		//entities.push(entity);
+		new Entity(entity);
 	});
+	*/
 	
 	//Load tiletypes
+	/*
 	$(xml).find('tileTypes').children().each(function(i) {
 		var tileType = {};
 		 $.each(this.attributes, function(index, attrib){
@@ -205,8 +311,9 @@ function loadMap(xml) {
      		}
 		});
 		tileTypes[tileType.index] = tileType;		
-	});
+	}); */
 	
+	/*
 	var rawMap = $(xml).find('map').text();
 	console.log(rawMap);
 	var rows  = rawMap.split("\n");  
@@ -226,18 +333,13 @@ function loadMap(xml) {
 	// Switch x and y values
 	var newArray = tileGrid[0].map(function(col, i) { 
   		return tileGrid.map(function(row) { 
-    		return row[i] 
+    		return row[i]; 
   		})
 	});
 	tileGrid = newArray;
-	resourceLoader();
-	drawTiles();
-	//drawEntities();
-	$("#gold-count").text(character.gold);
-	GameTimer.registerService(eachTick);
-	GameTimer.domReady();
-	loaded = true;
-}
+	*/
+
+//}
 
 function drawTiles() {
 	
@@ -269,25 +371,25 @@ function drawTiles() {
 			}
 		}
 		
+		//Blur & brightness filters for shadows
 		var blurFilter = new PIXI.filters.BlurFilter();
         blurFilter.blur    = .5;
         blurFilter.enabled = true;
-        
         var colorMatrix = new PIXI.filters.ColorMatrixFilter();
  		colorMatrix.brightness(0);
 		
 		for (var i=0;i<entities.length;i++) {
 			entities[i].spriteContainer = new PIXI.Container();
-			if (entities[i].hasOwnProperty('animate')) {
+			console.log(entities[i].name);
+			
+			// Animated sprites
+			if (entities[i].animate) {
 				console.log("animating " + entities[i].name);
 				var frames = entities[i].sprite.split(',');
 				var textures = [];
 				for (var f=0;f<frames.length;f++) {
 					textures.push(PIXI.Texture.fromFrame(frames[f]));
 				}
-				//var texture = new PIXI.Texture.fromImage(entities[i].sprite);
-				//entitySprite = new PIXI.Sprite(texture);
-				//frames.push(PIXI.Texture.fromFrame('rollSequence00' + val + '.png'));
 				entitySprite = new PIXI.extras.MovieClip(textures);
 				entitySprite.animationSpeed = 0.1;
 				entitySprite.play();
@@ -295,19 +397,21 @@ function drawTiles() {
 				var texture = new PIXI.Texture.fromImage(entities[i].sprite);
 				entitySprite = new PIXI.Sprite(texture);
 			}
-			entitySprite.position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;
-			entitySprite.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
+			entities[i].spriteContainer.position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;
+			entities[i].spriteContainer.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
+			//entitySprite.position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;
+			//entitySprite.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
 			if (entities[i].hasOwnProperty('randomOffset')) {
 				entitySprite.position.x += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
 				entitySprite.position.y += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
 			}
+			//entitySprite.position.x = entities[i].spriteContainer.position.x;
+			//entitySprite.position.y = entities[i].spriteContainer.position.y;
 			entitySprite.scale.x = 1;
 			entitySprite.scale.y = 1;
 			entitySprite.anchor.x = 0.5;
 			entitySprite.anchor.y = 0.5;
-			//shadows[i] = entitySprites[i];
-			//entityLayer.addChild(entitySprites[i]);
-			if (entities[i].hasOwnProperty('shadow')) {
+			if (entities[i].shadow) {
 				shadow = new PIXI.Sprite(texture);
 				shadow.position.x = entitySprite.position.x;
 				shadow.position.y = entitySprite.position.y + 5;
@@ -319,22 +423,13 @@ function drawTiles() {
 				entities[i].shadow = shadow;
 				entities[i].spriteContainer.addChild(entities[i].shadow);
 			}
-			//entityLayer.addChild(shadows[i]);
-			//entityLayer.swapChildren(entitySprites[i], shadows[i]);\
 			entities[i].spriteObj = entitySprite;
 			entities[i].spriteContainer.addChild(entities[i].spriteObj);
-			entityLayer.addChild(entities[i].spriteContainer);
+			charLayer.addChild(entities[i].spriteContainer);
 		}
-		var texture = new PIXI.Texture.fromImage(character.sprite);
-		character.spriteObj = new PIXI.Sprite(texture);
-
-		character.spriteObj.position.x = character.x * tileSize + Math.round(tileSize/2) + 2;
-	    character.spriteObj.position.y = character.y * tileSize + Math.round(tileSize/2) + 2;
-	    
-	    character.spriteObj.anchor.x = 0.5;
-	    character.spriteObj.anchor.y = 0.5;
-	    
-	    charLayer.addChild(character.spriteObj);
+		
+		//Draw character on top (TODO implement better z?)
+		charLayer.swapChildren(entities[characterID].spriteContainer,entities[entities.length-1].spriteContainer);
 
 		highlightBox.lineStyle(1, 0xDEDE39);
 		highlightBox.drawRect(2, 2, tileSize, tileSize);
@@ -346,8 +441,8 @@ function drawTiles() {
 	});
 }
 
-function moveChar(moveX, moveY) {
-	console.log("Moving to " + moveX + "," + moveY)
+function moveChar(moveX, moveY, entityID = 0) {
+	//console.log("Moving to " + moveX + "," + moveY)
 	if (!loaded)
 		return;
 	if (moveY < 0 || moveX < 0) {
@@ -363,11 +458,11 @@ function moveChar(moveX, moveY) {
 		return;
 	}
 	if (entityIneract([moveX,moveY])) {
-		character.x = moveX;
-		character.y = moveY;
-		console.log("Moved to " + character.x + "," + character.y);
-		if (character.x == character.moveX && character.y == character.moveY) {
-			character.moveX = -1;
+		entities[entityID].posX = moveX;
+		entities[entityID].posY = moveY;
+		//console.log("Moved to " + character.x + "," + character.y);
+		if (entities[entityID].posX == entities[entityID].moveX && entities[entityID].posY == entities[entityID].moveY) {
+			entities[entityID].moveX = -1;
 		}
 	}
 }
@@ -380,10 +475,6 @@ function entityIneract(movePos) {
 			console.log("Entity interaction!");
 			if (entities[i].type == "gold") {
 				addGold(entities[i].quantity);
-				//if (entities[i].name == "Gold") {
-					//gold = gold + entities[i].quantity;
-					//showMessage("gold +" + entities[i].quantity);
-				//}
 				entities[i].active = false;
 				playSound('sounds/coins.mp3');
 			}
@@ -392,9 +483,6 @@ function entityIneract(movePos) {
 				if (entities[i].hasOwnProperty("quantity")) {
 					itemQuantity = entities[i].quantity;
 				}
-				//inventory.push({name: entities[i].name});
-				//drawInv();
-				//showMessage("item +" + entities[i].name);
 				addItem(entities[i].name, itemQuantity);
 				entities[i].active = false;
 				playSound('sounds/bag-open.mp3');
@@ -416,7 +504,6 @@ function entityIneract(movePos) {
 					delete entities[i].gold;
 					opened = true;
 				}
-				//$("#entity-" + i + " img").attr("src", entities[i].sprite2);
 				var texture = new PIXI.Texture.fromImage(entities[i].sprite2);
 				entities[i].spriteObj.texture = texture;
 				if (opened)
@@ -429,10 +516,8 @@ function entityIneract(movePos) {
 			if (entities[i].type == "npc") {
 				if (entities[i].hasOwnProperty("sound"))
 					playSound(entities[i].sound, 200);
-				if (isHostile(entities[i].faction, character.faction)) {
-					new Action(character, "attack", entities[i], null, true);
-					//new Action(entities[i], "attack", character, null, true);
-					//attack(entities[i], character);
+				if (isHostile(entities[i].faction, entities[characterID].faction)) {
+					new Action(entities[characterID], "attack", entities[i], null, true);
 				}
 			}
 			if (entities[i].type == "door") {
@@ -442,7 +527,7 @@ function entityIneract(movePos) {
 					entities[i].solid = false;
 					movedChar = false;
 					//character.doneMoving = true;
-					character.moveX = -1;
+					entities[characterID].moveX = -1;
 					playSound('sounds/opendoor.mp3');
 				} else if (entities[i].solid == true){
 					playSound('sounds/locked.mp3');
@@ -454,13 +539,13 @@ function entityIneract(movePos) {
 				tempGrid = [entities[i].posX, entities[i].posY];
 				movedChar = false;
 				//character.doneMoving = true;
-				character.moveX = -1;
+				entities[characterID].moveX = -1;
 			}
 			if (entities[i].hasOwnProperty('actions')) {
 				var actions = entities[i].actions;
 				for (var j=0;j<actions.length;j++) {
 					if (actions[j].trigger == 'interact') {
-						doAction(actions[j].action, entities[i].posX, entities[i].posY, entities[i], actions[j].text)
+						doAction(actions[j].action, entities[i].posX, entities[i].posY, entities[i], actions[j].data)
 					}
 				}
 			}
@@ -471,6 +556,7 @@ function entityIneract(movePos) {
 		}
 			
 	}
+	console.log(movedChar);
 	return movedChar;
 }
 
@@ -486,7 +572,7 @@ function attack(actionIndex) {
 		action.target.hp -= damage;
 		playSound("sounds/sword-strike.mp3");
 		showMessage("Hit for " + damage + ". " + action.target.hp + "hp left!");
-		showText("-" + damage, 0xDD0000, action.target.spriteObj.x, action.target.spriteObj.y - 10);
+		showText("-" + damage, 0xDD0000, action.target.spriteContainer.x, action.target.spriteContainer.y - 10);
 		if (action.target.hp < 1) {
 			action.target.active = false;
 			//moveGrid[action.target.x][action.target.y] = 0;
@@ -495,16 +581,16 @@ function attack(actionIndex) {
 	} else {
 		playSound("sounds/miss.mp3");
 		showMessage("Miss!");
-		showText("miss", 0xDDDDDD, action.target.spriteObj.x, action.target.spriteObj.y - 10);
+		showText("miss", 0xDDDDDD, action.target.spriteContainer.x, action.target.spriteContainer.y - 10);
 	}
 }
 
 function addGold(amount, display = true) {
-	character.gold += amount;
-	$("#gold-count").text(character.gold);
+	entities[characterID].gold += amount;
+	$("#gold-count").text(entities[characterID].gold);
 	if (display) {
 		showMessage("Added " + amount + " gold", 2);
-		showText(amount + " gold", 0xDEDE39, character.spriteObj.position.x, character.spriteObj.position.y);
+		showText(amount + " gold", 0xDEDE39, entities[characterID].spriteContainer.position.x, entities[characterID].spriteContainer.position.y);
 	}
 }
 
@@ -513,10 +599,10 @@ function addItem(name, quantity = 1) {
 	drawInv();
 	if (quantity > 1) {
 		showMessage("Picked up " + name + " x" + quantity, 2);
-		showText(name + " x" + quantity, 0xDEDE39, character.spriteObj.position.x, character.spriteObj.position.y + 15);
+		showText(name + " x" + quantity, 0xDEDE39, entities[characterID].spriteContainer.position.x, entities[characterID].spriteContainer.position.y + 15);
 	} else {
 		showMessage("Picked up " + name, 2);
-		showText(name, 0xDEDE39, character.spriteObj.position.x, character.spriteObj.position.y + 15);
+		showText(name, 0xDEDE39, entities[characterID].spriteContainer.position.x, entities[characterID].spriteContainer.position.y + 15);
 	}
 }
 
@@ -541,7 +627,7 @@ function drawInv() {
 	}
 }
 
-function showMessage(text, type = 1, posX = character.spriteObj.position.x, posY = character.spriteObj.position.y) {
+function showMessage(text, type = 1, posX = entities[characterID].spriteContainer.position.x, posY = entities[characterID].spriteContainer.position.y) {
 	text = text.charAt(0).toUpperCase() + text.slice(1);
 	var message = '<div>' + text +'</div>';
 	if (type == 2)
@@ -568,7 +654,7 @@ function showMessage(text, type = 1, posX = character.spriteObj.position.x, posY
 	*/
 }
 
-function showText(text, color = 0xDEDE39, posX = character.spriteObj.position.x, posY = character.spriteObj.position.y) {
+function showText(text, color = 0xDEDE39, posX = entities[characterID].spriteObj.position.x, posY = entities[characterID].spriteObj.position.y) {
 	var message = new PIXI.Text(text,{fontFamily : 'Lucida Console, Monaco, monospace', fontSize: 14, fill : color, align : 'center', dropShadow: true, dropShadowDistance: 2,});
 	message.position.x = posX;
 	message.position.y = posY;
@@ -587,54 +673,52 @@ function inspectTile(xPos, yPos) {
 	console.log(tileTypes[tileID].name + "(" + tileID + ") Solid: " + tileTypes[tileID].solid)
 }
 
-function findPath(xPos, yPos, entityID = null) {
-	if (entityID) {
-		//get entityPos
-	} else {
-		var easystar = new EasyStar.js();
-        easystar.setGrid(moveGrid);
-        easystar.setAcceptableTiles([0]);
-        
-        //If next to solid entity, interact instead of pathfinding
-        if (Math.abs(character.x - xPos) == 1 && character.y == yPos && checkForEntity(xPos, yPos)) {
-        	moveChar(xPos, yPos);
-        	character.moveX = -1;
-        	return;
-        }
-        if (Math.abs(character.y - yPos) == 1 && character.x == xPos && checkForEntity(xPos, yPos)) {
-        	moveChar(xPos, yPos);
-        	character.moveX = -1;
-        	return;
-        }
-        easystar.findPath(character.x, character.y, xPos, yPos, function( path ) {
-        	try {
-        		if (path[1] != null) {
-        			moveChar(path[1].x, path[1].y);
-        		} else {
-        			character.moveX = -1;
-        			return;
-        		}
-        	}
-        	catch(err) {
-        		console.log('Invalid path;');
-        		character.moveX = -1;
-        		return;
-        	}
-        	/*
-       		if (path[2] != null && !character.doneMoving) {
-    			//setTimeout( function() {
-    			//	findPath(xPos, yPos);
-  				//}, 200);
-  			} else {
-  				character.doneMoving = true;
-  				character.moveX = -1;
-  			} */
-		});
-		easystar.calculate();
-		if (tempGrid.length > 0) {
-			moveGrid[tempGrid[1]][tempGrid[0]] = 0;
-			tempGrid = [];
-		}
+function findPath(xPos, yPos, entityID = 0) {
+	var moveableTiles = [0];
+	//moveGrid[6][4] = 1;
+	var easystar = new EasyStar.js();
+    easystar.setGrid(moveGrid);
+    easystar.setAcceptableTiles(moveableTiles);
+    
+    //If next to solid entity, interact instead of pathfinding
+    if (Math.abs(entities[entityID].posX - xPos) == 1 && entities[entityID].posY == yPos && checkForEntity(xPos, yPos)) {
+    	moveChar(xPos, yPos);
+    	entities[entityID].moveX = -1;
+    	return;
+    }
+    if (Math.abs(entities[entityID].posY - yPos) == 1 && entities[entityID].posX == xPos && checkForEntity(xPos, yPos)) {
+    	moveChar(xPos, yPos);
+    	entities[entityID].moveX = -1;
+    	return;
+    }
+    easystar.findPath(entities[entityID].posX, entities[entityID].posY, xPos, yPos, function( path ) {
+    	try {
+    		if (path[1] != null) {
+    			moveChar(path[1].x, path[1].y);
+    		} else {
+    			entities[entityID].moveX = -1;
+    			return;
+    		}
+    	}
+    	catch(err) {
+    		console.log('Invalid path;');
+    		entities[entityID].moveX = -1;
+    		return;
+    	}
+    	/*
+   		if (path[2] != null && !character.doneMoving) {
+			//setTimeout( function() {
+			//	findPath(xPos, yPos);
+				//}, 200);
+			} else {
+				character.doneMoving = true;
+				character.moveX = -1;
+			} */
+	});
+	easystar.calculate();
+	if (tempGrid.length > 0) {
+		moveGrid[tempGrid[1]][tempGrid[0]] = 0;
+		tempGrid = [];
 	}
 }
 
@@ -645,8 +729,8 @@ function checkForEntity(x, y) {
 			return entities[i];
 		}
 	}
-	if (character.x == x && character.y == y) {
-			return character;
+	if (entities[characterID].x == x && entities[characterID].y == y) {
+			return entities[characterID];
 	}
 	return false;
 }
@@ -692,7 +776,7 @@ var Action = function(entity, type, target = null, data = null, repeat = false) 
 	this.active = true;
 
 	actions.push(this);
-}
+};
 
 var EntityAction = function(entityID, type, target = null, data = null, repeat = false) {
 	this.entity = entity;
@@ -713,27 +797,23 @@ function doAction(type, x, y, entity = null, text = '', repeat = false) {
 		else
 			showMessage(text);
 	}
-}
+};
 
 function animate() {
 	    // start the timer for the next animation loop
 	    requestAnimationFrame(animate);
 	
 	    //charSprite.rotation += 0.01;
-
+		/*
 	    var charSpriteX = (character.spriteObj.position.x - 2 - Math.round(tileSize/2))/tileSize;
 	    var charSpriteY = (character.spriteObj.position.y - 2 - Math.round(tileSize/2))/tileSize;
-	    //if (Math.abs(charSpriteX - character.x) > 0.01) {
-	    //	character.spriteObj.position.x += (character.x - charSpriteX) * 4.0;
-	    //}// else if (character.spriteObj.position.x != character.x * tileSize + Math.round(tileSize/2) + 2) {
-	    //	character.spriteObj.position.x = character.x * tileSize + Math.round(tileSize/2) + 2;
-	    //}
+
 	    if (charSpriteX != character.x) {
 	    	character.spriteObj.position.x += (character.x - charSpriteX) * 4.0;
 	    }
 	    if (charSpriteY != character.y) {
 	    	character.spriteObj.position.y += (character.y - charSpriteY) * 4.0;
-	    }
+	    } */
 	    
 	    for (var i=0;i<entities.length;i++) {
 	    	//Fade out inactive entities
@@ -743,6 +823,22 @@ function animate() {
 	    			entities[i].spriteContainer.visible == false;
 	    		}
 	    	}
+
+	    	if (['decor', 'container', 'gold', 'door'].indexOf(entities[i].type) > -1)
+	    		continue;
+    		//var entitySpriteX = (entities[i].spriteContainer.position.x - 1 - Math.round(tileSize/2))/tileSize;
+    		var entitySpriteX = entities[i].posX * tileSize + Math.abs(tileSize/2) + 2;
+		    //var entitySpriteY = (entities[i].spriteContainer.position.y - 1 - Math.round(tileSize/2))/tileSize;
+		    var entitySpriteY = entities[i].posY * tileSize + Math.abs(tileSize/2) + 2;
+		
+		    if (Math.abs(entities[i].spriteContainer.position.x - entitySpriteX) >= 0.5) {
+		    	entities[i].spriteContainer.position.x += (entitySpriteX - entities[i].spriteContainer.position.x) * 0.16;
+		    	console.log(entitySpriteX + " " + entities[i].spriteContainer.position.x);
+		    }
+		    if (Math.abs(entitySpriteY - entities[i].spriteContainer.position.y) >= 0.5) {
+		    	entities[i].spriteContainer.position.y += (entitySpriteY - entities[i].spriteContainer.position.y) * 0.16;
+		    }
+
 	    }
 	    
 	    for (var i=0;i<messages.children.length;i++) {
@@ -804,39 +900,24 @@ var GameTimer = (function () {
 })();
 
 var eachTick = function(){
-    //console.log(new Date().getTime());
-    if (character.moveX != -1) {
-    	//character.x = character.moveX;
-    	//character.y = character.moveY;
-    	findPath(character.moveX, character.moveY);
-    }
-    
-    /*
+ 
     for (var i=0;i<entities.length;i++) {
-    	if (entities[i].hasOwnProperty('actions')) {
-			var actions = entities[i].actions;
-			for (var j=0;j<actions.length;j++) {
-				if (actions[j].trigger == 'entityNear') {
-					var radius = actions[j].text;
-					for (var x = entities[i].x - radius; x < entites[i].x + radius; x++) {
-						for (var y = entities[i].y - radius; y < entites[i].y + radius; y++) {
-							if(check)
-						}
-					}
-					//doAction(actions[j].action, entities[i].posX, entities[i].posY, entities[i], actions[j].text)
-				}
-			}
-		}
-	} */
+    	//Move Entity
+    	if (entities[i].moveX != -1) {
+    		//character.x = character.moveX;
+    		//character.y = character.moveY;
+    		findPath(entities[i].moveX, entities[i].moveY, i);
+   		}
     
-    for (var i=0;i<entities.length;i++) {
-    	if(entities[i].actions.length > 0) {
+    	//Attack Target
+    	
+    	//Perform Actions
+    	if(entities[i].actions.length > 0 && entities[i].active) {
     		runEntityActions(i);
     	}
     }
     
     runActions();
-    console.log(actions.length);
     
     for (var i=0;i<events.length;i++) {
     
@@ -844,7 +925,12 @@ var eachTick = function(){
 };
 
 function runEntityActions(entityID) {
-	
+	var entity = entities[entityID];
+	for (var i=0;i<entity.actions.length;i++) {
+		if (entity.actions[i].active == false)
+			continue;
+		
+	}
 }
 
 function runActions() {
@@ -897,21 +983,27 @@ function resourceLoader() {
 	for (var i=0;i<tileTypes.length;i++) {
 		if (sprites.indexOf(tileTypes[i].sprite) == -1) {
 			sprites.push(tileTypes[i].sprite);
+			//console.log(tileTypes[i].sprite);
 		}
 	}
 	for (var i=0;i<entities.length;i++) {
+		//console.log(entities[i].sprite);
+		if (!entities[i].sprite)
+			continue;
 		if (sprites.indexOf(entities[i].sprite) == -1 && !entities[i].hasOwnProperty('animate')) {
 			sprites.push(entities[i].sprite);
+			//console.log(entities[i].sprite);
 		} else {
 			var frames = entities[i].sprite.split(",");
 			for (var f=0;f<frames.length;f++) {
 				if (sprites.indexOf(frames[f]) == -1) {
 					sprites.push(frames[f]);
+					//console.log(frames[f]);
 				}
 			}
 		}
 		if (entities[i].hasOwnProperty('sprite2')) {
-			if (sprites.indexOf(entities[i].sprite2) == -1) {
+			if (sprites.indexOf(entities[i].sprite2) == -1 && entities[i].sprite2) {
 				sprites.push(entities[i].sprite2);
 			}
 		}
@@ -931,7 +1023,7 @@ function resourceLoader() {
 		}
 	}
 	for (var i=0;i<sprites.length;i++) {
-		console.log(sprites[i]);
+		//console.log(sprites[i]);
 		PIXI.loader.add(sprites[i]);
 	}
 	/*
@@ -942,10 +1034,10 @@ function resourceLoader() {
 	//for (var i=0;i<entities.length;i++) {
 	//	PIXI.loader.add(entities[i].sprite);
 	//}
-	PIXI.loader.add(character.sprite);
+	//PIXI.loader.add(character.sprite);
 
 
-	//Load sounds TODO
+	//Load sounds
 	cacheSound('sounds/bag-open.mp3');
 	cacheSound('sounds/chest-open.mp3');
 	cacheSound('sounds/coins.mp3');

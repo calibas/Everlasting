@@ -1,0 +1,15 @@
+{
+	"sprite": "sprites/fighter2.png",
+	"name": "Shanna",
+	"type": "player",
+	"moveX": -1,
+	"moveY": -1,
+	"doneMoving": true,
+	"gold": 0,
+	"fame": 0,
+	"inventory": [],
+	"damage": 2,
+	"hp": 15,
+	"faction": "human",
+	"actions": []
+}
