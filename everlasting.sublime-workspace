@@ -3,39 +3,90 @@
 	{
 		"selected_items":
 		[
+			[
+				"getJSON",
+				"getJSON"
+			],
+			[
+				"grid",
+				"grid"
+			]
 		]
 	},
 	"buffers":
 	[
 		{
-			"contents": "var levelHeight;\nvar levelWidth;\n\nvar backgroundTile = 0;\nvar tileSize = 33;\n\nvar tileGrid = [];\nvar tempGrid = [];\nvar moveGrid = [];\n\nvar characterID = 0;\n\n// move or inspect on mouse click\nvar mouseMode = \"move\";\n\nvar loaded = false;\n\nvar fame = 0;\nvar inventory = [];\n\nvar tileTypes = [];\nvar entities = [];\n\nvar actions = [];\nvar events = [];\n\nvar renderer = new PIXI.autoDetectRenderer(2 * tileSize , 2 * tileSize, {backgroundColor:\"0x444444\"});\nrenderer.roundPixels = true;\nvar stage = new PIXI.Container();\nvar tileLayer = new PIXI.Container();\nvar highlightLayer = new PIXI.Container();\nvar entityLayer = new PIXI.Container();\nvar charLayer = new PIXI.Container();\nvar overLayer = new PIXI.Container();\nvar messages = new PIXI.Container();\nstage.addChild(tileLayer);\nstage.addChild(highlightLayer);\nstage.addChild(entityLayer);\nstage.addChild(charLayer);\nstage.addChild(overLayer);\noverLayer.addChild(messages);\n\nvar highlightBox = new PIXI.Graphics();\n\nvar music;\nvar sound = 1;\nvar sounds = {};\n\n$(document).ready(function(){\n\t\n\t//document.body.appendChild(renderer.view);\n\t$('#game-area-wrapper').append(renderer.view);\n\t\n\tif (getCookie('music') != '') {\n\t\t$('#mute-music img').css('opacity', 0.4);\n\t\t//music.pause();\n\t}\n\tif (getCookie('sound') != '') {\n\t\t$('#mute-sound img').css('opacity', 0.4);\n\t\tsound = 0;\n\t}\n\t\n\t$.when (\n\t\t$.getJSON('character.json', {}, function() {}),\n\t\t$.getJSON('map1.json', {}, function() {})\n\t\t//$.ajax({url: \"map1.xml\", success: function() {}, cache: false})\n\t).done(function(arg1, arg2, arg3){\n    \tloadCharacter(arg1);\n    \tloadMapJson(arg2);\n    \t//loadMap(arg3);\n\t});\n\t\n\t//Make arrow keys move character\n\t$(window).keypress(function(e) {\n\t  if (loaded && character.moveX == -1) {\n       \tvar ev = e || window.event;\n       \tvar key = ev.keyCode || ev.which;\n       \tif (key == \"38\") {\n       \t\tentities[characterID].moveY = entities[characterID].posY - 1;\n       \t\tentities[characterID].moveX = entities[characterID].posX;\n       \t}\n\t\tif (key == \"40\") {\n       \t\tentities[characterID].moveY = entities[characterID].posY + 1;\n       \t\tentities[characterID].moveX = entities[characterID].posX;\n       \t}\n\t\tif (key == \"37\") {\n       \t\tentities[characterID].moveY = entities[characterID].posY;\n       \t\tentities[characterID].moveX = entities[characterID].posX - 1;\n       \t}\n\t\t\n\t\tif (key == \"39\") {\n       \t\tentities[characterID].moveY = entities[characterID].posY;\n       \t\tentities[characterID].moveX = entities[characterID].posX + 1;\n       \t}\n\t  }\n\t});\n\t\n\t//No right click on canvas (Add custom menu?)\n\t$('#game-area-wrapper canvas').bind('contextmenu', function(e){\n    \treturn false;\n\t}); \n\n\t$(\"#game-area-wrapper canvas\").click(function(e){\n\t\tvar xClickPos = Math.floor((e.pageX - this.offsetLeft) / tileSize);\n    \tvar yClickPos = Math.floor((e.pageY - this.offsetTop) / tileSize);\n    \tif (xClickPos > levelWidth - 1)\n    \t\txClickPos--;\n    \tif (yClickPos > levelHeight - 1)\n    \t\tyClickPos--;\n\t\tconsole.log(\"x: \" + xClickPos + \"y: \" + yClickPos);\n\t\t//TODO: Optional inspect\n\t\tinspectTile(xClickPos, yClickPos);\n\t\tif (entities[characterID].moveX == -1) {\n\t\t\tentities[characterID].moveX = xClickPos;\n\t\t\tentities[characterID].moveY = yClickPos;\n\t\t\thighlightBox.position.x = xClickPos * tileSize;\n\t\t\thighlightBox.position.y = yClickPos * tileSize - 1;\n\t\t\thighlightBox.visible = true;\n\t\t}\n\t});\n\t$(\"#mute-music\").click(function(e){\n\t\tif (music.paused) {\n\t\t\tmusic.play();\n\t\t\t$('#mute-music img').css('opacity', 1.0);\n\t\t\tsetCookie('music', '');\n\t\t} else {\n\t\t\tmusic.pause();\n\t\t\t$('#mute-music img').css('opacity', 0.4);\n\t\t\tsetCookie('music', 'mute');\n\t\t}\n\t});\n\t$(\"#mute-sound\").click(function(e){\n\t\tif (sound == 0) {\n\t\t\tsound = 1;\n\t\t\t$('#mute-sound img').css('opacity', 1.0);\n\t\t\tsetCookie('sound', '');\n\t\t} else {\n\t\t\tsound = 0;\n\t\t\t$('#mute-sound img').css('opacity', 0.4);\n\t\t\tsetCookie('sound', '0');\n\t\t}\n\t});\n}); \n\nvar Entity = function(obj) {\n\tthis.name = obj.name || \"Generic entity\";\n\tthis.posX = obj.posX;\n\tthis.posY = obj.posY;\n\tthis.moveX = obj.moveX || -1;\n\tthis.moveY = obj.moveY || -1;\n\tthis.target = -1;\n\tthis.sprite = obj.sprite || null;\n\tthis.sprite2 = obj.sprite2 || null;\n\tthis.shadow = obj.shadow ? true : false;\n\t//console.log(obj.shadow + \" \" + this.shadow);\n\tthis.solid = obj.solid ? true : false;\n\tthis.active = obj.active || true;\n\tthis.type = obj.type || \"decor\";\n\tthis.quantity = obj.quantity || 1;\n\tthis.randomOffset = obj.randomOffset || 0;\n\tthis.animate = obj.animate ? true : false;\n\tthis.sound = obj.sound || null;\n\tthis.item = obj.item || null;\n\tthis.gold = obj.gold || null;\n\tthis.faction = obj.faction || null;\n\tthis.hp = obj.hp || null;\n\tthis.actions = obj.actions || [];\n\n\tentities.push(this);\n};\n\nfunction loadCharacter(json) {\n\t//console.log(json[0]);\n\t//character = json[0];\n\tnew Entity(json[0]);\n}\n\nfunction loadMapJson(json) {\n\t$(\"#top-menu h3\").text(json[0].title);\n\tlevelHeight = json[0].levelHeight;\n\tlevelWidth = json[0].levelWidth;\n\trenderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);\n\tbackgroundTile = json[0].backgroundTile;\n\tplayMusic(json[0].music);\n\tentities[characterID].posX = json[0].spawnX;\n\tentities[characterID].posY = json[0].spawnY;\n\ttileTypes = json[0].tileTypes;\n\ttileGrid = json[0].tileMap;\n\tcreateMoveGrid();\n\t//Invert tile grid\n\tvar newArray = tileGrid[0].map(function(col, i) { \n  \t\treturn tileGrid.map(function(row) { \n    \t\treturn row[i]; \n  \t\t})\n\t});\n\ttileGrid = newArray;\n\tfor(var i=0;i<json[0].entities.length;i++) {\n\t\tnew Entity(json[0].entities[i]);\n\t}\n\tresourceLoader();\n\tdrawTiles();\n\t//drawEntities();\n\t$(\"#gold-count\").text(entities[characterID].gold);\n\tGameTimer.registerService(eachTick);\n\tGameTimer.domReady();\n\tloaded = true;\n}\n\nfunction createMoveGrid() {\n\t//var gridCopy = jQuery.extend(true, {}, tileGrid);\n\tvar gridCopy = JSON.parse(JSON.stringify(tileGrid));\n\tfor (var i=0;i<gridCopy.length;i++) {\n\t\tfor (var j=0;j<gridCopy[i].length;j++) {\n\t\t\t//console.log(i + \" \" + j + \" \" + tileTypes[gridCopy[i][j]].solid);\n\t\t\tif (tileTypes[gridCopy[i][j]].solid) {\n\t\t\t\tgridCopy[i][j] = 1;\n\t\t\t} else {\n\t\t\t\tgridCopy[i][j] = 0;\n\t\t\t}\n\t\t}\n\t} \n\tmoveGrid = gridCopy;\n\tconsole.log(moveGrid);\n\t\n}\n\n//function loadMap(xml) {\n\t//var title = $(xml).find('title').text();\n\t//$(\"#top-menu h3\").text(title);\n\t//levelHeight = $(xml).find('levelHeight').text();\n\t//levelWidth = $(xml).find('levelWidth').text();\n\t//renderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);\n\t//backgroundTile = $(xml).find('backgroundTile').text();\n\t//playMusic($(xml).find('music').text());\n\n\t//Set spawn point\n\t//var spawnX = parseInt($(xml).find('spawnX').text(), 10);\n\t//var spawnY = parseInt($(xml).find('spawnY').text(), 10);\n\t//characterPos = [spawnX,spawnY];\n\t//character.x = spawnX;\n\t//character.y = spawnY;\n\t//entities[characterID].posX = spawnX;\n\t//entities[characterID].posY = spawnY;\n\t\n\t\n\t//Load entities\n\t/*\n\tvar boolTypes = ['solid','active'];\n\tvar intTypes = ['quantity','gold', 'posX', 'posY'];\n\t$(xml).find('entities').children().each(function(i) {\n\t\tvar entity = {};\n\t\tentity.actions = []\n\t\t $.each(this.attributes, function(index, attrib){\n     \t\tvar name = attrib.name;\n     \t\tvar value = attrib.value;\n     \t\tif (boolTypes.indexOf(name) != -1) {\n     \t\t\tif (value == 'true')\n     \t\t\t\tentity[name] = true;\n     \t\t\telse\n     \t\t\t\tentity[name] = false;\n     \t\t} else if (intTypes.indexOf(name) != -1) {\n     \t\t\tentity[name] = parseInt(value, 10);\n     \t\t} else {\n     \t\t\tentity[name] = value;\n     \t\t}\n\t\t});\n\t\t$(this).find('actions').children().each(function(i) {\n\t\t\tconsole.log($(this).text());\n\t\t\tvar action = {};\n\t\t\taction.text = $(this).text();\n\t\t\t$.each(this.attributes, function(index, attrib){\n     \t\t\taction[attrib.name] = attrib.value;\n     \t\t});\n\t\t\t//var action\n\t\t\tif (action.trigger == \"entityNear\") {\n\t\t\t\tnew Action(entity, \"entityNear\", null, action.text, true);\n\t\t\t}\n\t\t\tentity['actions'].push(action);\n\t\t});\n\t\t//entities.push(entity);\n\t\tnew Entity(entity);\n\t});\n\t*/\n\t\n\t//Load tiletypes\n\t/*\n\t$(xml).find('tileTypes').children().each(function(i) {\n\t\tvar tileType = {};\n\t\t $.each(this.attributes, function(index, attrib){\n     \t\tvar name = attrib.name;\n     \t\tvar value = attrib.value;\n     \t\tif (boolTypes.indexOf(name) != -1) {\n     \t\t\tif (value == 'true')\n     \t\t\t\ttileType[name] = true;\n     \t\t\telse\n     \t\t\t\ttileType[name] = false;\n\t\t\t} else if (intTypes.indexOf(name) != -1) {\n     \t\t\ttileType[name] = parseInt(value, 10);\n     \t\t} else {\n     \t\t\ttileType[name] = value;\n     \t\t}\n\t\t});\n\t\ttileTypes[tileType.index] = tileType;\t\t\n\t}); */\n\t\n\t/*\n\tvar rawMap = $(xml).find('map').text();\n\tconsole.log(rawMap);\n\tvar rows  = rawMap.split(\"\\n\");  \n\tfor (var i=0;i<rows.length;i++) {\n\t\tvar values = rows[i].split(\",\");\n\t\ttileGrid[i] = values;\n\t\tmoveGrid.push([]);\n\t\tfor (var j=0;j<values.length;j++) {\n\t\t\t//tileGrid[i][j] = values[j];\n\t\t\tif (tileTypes[values[j]].solid) {\n\t\t\t\tmoveGrid[i].push(1);\n\t\t\t} else {\n\t\t\t\tmoveGrid[i].push(0);\n\t\t\t}\n\t\t}\n\t}\n\t// Switch x and y values\n\tvar newArray = tileGrid[0].map(function(col, i) { \n  \t\treturn tileGrid.map(function(row) { \n    \t\treturn row[i]; \n  \t\t})\n\t});\n\ttileGrid = newArray;\n\t*/\n\n//}\n\nfunction drawTiles() {\n\t\n\tPIXI.loader.load(function (loader, resources) {\n\t\tfor (var i=0;i<tileGrid.length;i++) {\n\t\t\tfor (var j=0;j<tileGrid[i].length;j++) {\n\t\t\t\tvar colorMatrix = new PIXI.filters.ColorMatrixFilter();\n \t\t\t\t//Add slight random +/- contrast to tiles\n \t\t\t\tcolorMatrix.contrast((getRandomInt(0,10))/100, true);\n \t\t\t\t//colorMatrix.hue(getRandomInt(0,6)-3, true);\n\t\t\t\tvar texture = new PIXI.Texture.fromImage(tileTypes[tileGrid[i][j]].sprite);\n\t\t\t\tvar tile = new PIXI.Sprite(texture);\n\t\t\t\ttile.position.x = i * tileSize + Math.abs(tileSize/2) + 2;\n\t\t\t\ttile.position.y = j * tileSize + Math.abs(tileSize/2) + 2;\n\t\t\t\ttile.scale.x = 1;\n\t\t\t\ttile.scale.y = 1;\n\t\t\t\ttile.anchor.x = 0.5;\n\t\t\t\ttile.anchor.y = 0.5;\n\t\t\t\tif (tileTypes[tileGrid[i][j]].hasOwnProperty(\"randomrotate\")) {\n\t\t\t\t\trotateDeg = getRandomInt(0,3) * 90;\n\t\t\t\t\ttile.rotation = rotateDeg * Math.PI / 180;\n\t\t\t\t}\n\t\t\t\ttile.filters = [colorMatrix];\n\t\t\t\tif (tileTypes[tileGrid[i][j]].z == 0) {\n\t\t\t\t\ttileLayer.addChild(tile);\n\t\t\t\t} else {\n\t\t\t\t\toverLayer.addChild(tile);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\t\n\t\t//Blur & brightness filters for shadows\n\t\tvar blurFilter = new PIXI.filters.BlurFilter();\n        blurFilter.blur    = .5;\n        blurFilter.enabled = true;\n        var colorMatrix = new PIXI.filters.ColorMatrixFilter();\n \t\tcolorMatrix.brightness(0);\n\t\t\n\t\tfor (var i=0;i<entities.length;i++) {\n\t\t\tentities[i].spriteContainer = new PIXI.Container();\n\t\t\tconsole.log(entities[i].name);\n\t\t\t\n\t\t\t// Animated sprites\n\t\t\tif (entities[i].animate) {\n\t\t\t\tconsole.log(\"animating \" + entities[i].name);\n\t\t\t\tvar frames = entities[i].sprite.split(',');\n\t\t\t\tvar textures = [];\n\t\t\t\tfor (var f=0;f<frames.length;f++) {\n\t\t\t\t\ttextures.push(PIXI.Texture.fromFrame(frames[f]));\n\t\t\t\t}\n\t\t\t\tentitySprite = new PIXI.extras.MovieClip(textures);\n\t\t\t\tentitySprite.animationSpeed = 0.1;\n\t\t\t\tentitySprite.play();\n\t\t\t} else {\n\t\t\t\tvar texture = new PIXI.Texture.fromImage(entities[i].sprite);\n\t\t\t\tentitySprite = new PIXI.Sprite(texture);\n\t\t\t}\n\t\t\tentities[i].spriteContainer.position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;\n\t\t\tentities[i].spriteContainer.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;\n\t\t\t//entitySprite.position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;\n\t\t\t//entitySprite.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;\n\t\t\tif (entities[i].hasOwnProperty('randomOffset')) {\n\t\t\t\tentitySprite.position.x += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;\n\t\t\t\tentitySprite.position.y += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;\n\t\t\t}\n\t\t\t//entitySprite.position.x = entities[i].spriteContainer.position.x;\n\t\t\t//entitySprite.position.y = entities[i].spriteContainer.position.y;\n\t\t\tentitySprite.scale.x = 1;\n\t\t\tentitySprite.scale.y = 1;\n\t\t\tentitySprite.anchor.x = 0.5;\n\t\t\tentitySprite.anchor.y = 0.5;\n\t\t\tif (entities[i].shadow) {\n\t\t\t\tshadow = new PIXI.Sprite(texture);\n\t\t\t\tshadow.position.x = entitySprite.position.x;\n\t\t\t\tshadow.position.y = entitySprite.position.y + 5;\n\t\t\t\tshadow.anchor.x = 0.5;\n\t\t\t\tshadow.anchor.y = 0.5;\n\t\t\t\tshadow.alpha = 0.3;\n\t\t\t\tshadow._tint = 0x000000;\n\t\t\t\tshadow.filters = [colorMatrix,blurFilter];\n\t\t\t\tentities[i].shadow = shadow;\n\t\t\t\tentities[i].spriteContainer.addChild(entities[i].shadow);\n\t\t\t}\n\t\t\tentities[i].spriteObj = entitySprite;\n\t\t\tentities[i].spriteContainer.addChild(entities[i].spriteObj);\n\t\t\tcharLayer.addChild(entities[i].spriteContainer);\n\t\t}\n\t\t\n\t\t//Draw character on top (TODO implement better z?)\n\t\tcharLayer.swapChildren(entities[characterID].spriteContainer,entities[entities.length-1].spriteContainer);\n\n\t\thighlightBox.lineStyle(1, 0xDEDE39);\n\t\thighlightBox.drawRect(2, 2, tileSize, tileSize);\n\t\thighlightBox.visible = false;\n\t\thighlightLayer.addChild(highlightBox);\n\t\t\n\t    // kick off the animation loop (defined below)\n\t    animate();\n\t});\n}\n\nfunction moveChar(moveX, moveY, entityID = 0) {\n\t//console.log(\"Moving to \" + moveX + \",\" + moveY)\n\tif (!loaded)\n\t\treturn;\n\tif (moveY < 0 || moveX < 0) {\n\t\tconsole.log(\"Out of bounds!\");\n\t\treturn;\n\t}\n\tif (moveY >= levelHeight || moveX >= levelWidth) {\n\t\tconsole.log(\"Out of bounds!\");\n\t\treturn;\n\t}\n\tif (tileTypes[tileGrid[moveX][moveY]].solid) {\n\t\tconsole.log(\"Solid at \" + moveX + \",\" + moveY);\n\t\treturn;\n\t}\n\tif (entityIneract([moveX,moveY])) {\n\t\tentities[entityID].posX = moveX;\n\t\tentities[entityID].posY = moveY;\n\t\t//console.log(\"Moved to \" + character.x + \",\" + character.y);\n\t\tif (entities[entityID].posX == entities[entityID].moveX && entities[entityID].posY == entities[entityID].moveY) {\n\t\t\tentities[entityID].moveX = -1;\n\t\t}\n\t}\n}\n\nfunction entityIneract(movePos) {\n\t//Returns false if character movement blocked\n\tvar movedChar = true;\n\tfor (var i=0;i<entities.length;i++) {\n\t\tif (entities[i].posX == movePos[0] && entities[i].posY == movePos[1] && entities[i].active) {\n\t\t\tconsole.log(\"Entity interaction!\");\n\t\t\tif (entities[i].type == \"gold\") {\n\t\t\t\taddGold(entities[i].quantity);\n\t\t\t\tentities[i].active = false;\n\t\t\t\tplaySound('sounds/coins.mp3');\n\t\t\t}\n\t\t\tif (entities[i].type == \"item\") {\n\t\t\t\tvar itemQuantity = 1;\n\t\t\t\tif (entities[i].hasOwnProperty(\"quantity\")) {\n\t\t\t\t\titemQuantity = entities[i].quantity;\n\t\t\t\t}\n\t\t\t\taddItem(entities[i].name, itemQuantity);\n\t\t\t\tentities[i].active = false;\n\t\t\t\tplaySound('sounds/bag-open.mp3');\n\n\t\t\t}\n\t\t\tif (entities[i].type == \"container\") {\n\t\t\t\tvar opened = false;\n\t\t\t\tif (entities[i].hasOwnProperty(\"item\")) {\n\t\t\t\t\tif (entities[i].hasOwnProperty(\"quantity\")) {\n\t\t\t\t\t\taddItem(entities[i].item, entities[i].quantity);\n\t\t\t\t\t} else {\n\t\t\t\t\t\taddItem(entities[i].item);\n\t\t\t\t\t}\n\t\t\t\t\tdelete entities[i].item;\n\t\t\t\t\topened = true;\n\t\t\t\t}\n\t\t\t\tif (entities[i].hasOwnProperty(\"gold\")) {\n\t\t\t\t\taddGold(entities[i].gold);\n\t\t\t\t\tdelete entities[i].gold;\n\t\t\t\t\topened = true;\n\t\t\t\t}\n\t\t\t\tvar texture = new PIXI.Texture.fromImage(entities[i].sprite2);\n\t\t\t\tentities[i].spriteObj.texture = texture;\n\t\t\t\tif (opened)\n\t\t\t\t\tplaySound('sounds/chest-open.mp3');\n\t\t\t}\n\t\t\tif (entities[i].type == \"decor\") {\n\t\t\t\tif (entities[i].hasOwnProperty(\"sound\"))\n\t\t\t\t\tplaySound(entities[i].sound, 200);\n\t\t\t}\n\t\t\tif (entities[i].type == \"npc\") {\n\t\t\t\tif (entities[i].hasOwnProperty(\"sound\"))\n\t\t\t\t\tplaySound(entities[i].sound, 200);\n\t\t\t\tif (isHostile(entities[i].faction, entities[characterID].faction)) {\n\t\t\t\t\tnew Action(entities[characterID], \"attack\", entities[i], null, true);\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (entities[i].type == \"door\") {\n\t\t\t\tif(checkInventory(\"key\", true)) {\n\t\t\t\t\tvar texture = new PIXI.Texture.fromImage(entities[i].sprite2);\n\t\t\t\t\tentities[i].spriteObj.texture = texture;\n\t\t\t\t\tentities[i].solid = false;\n\t\t\t\t\tmovedChar = false;\n\t\t\t\t\t//character.doneMoving = true;\n\t\t\t\t\tentities[characterID].moveX = -1;\n\t\t\t\t\tplaySound('sounds/opendoor.mp3');\n\t\t\t\t} else if (entities[i].solid == true){\n\t\t\t\t\tplaySound('sounds/locked.mp3');\n\t\t\t\t}\n\t\t\t}\n\t\t\tif (entities[i].solid) {\n\t\t\t\tconsole.log(\"solid at: \" + entities[i].posX + \" \" + entities[i].posY);\n\t\t\t\tmoveGrid[entities[i].posY][entities[i].posX] = 1;\n\t\t\t\ttempGrid = [entities[i].posX, entities[i].posY];\n\t\t\t\tmovedChar = false;\n\t\t\t\t//character.doneMoving = true;\n\t\t\t\tentities[characterID].moveX = -1;\n\t\t\t}\n\t\t\tif (entities[i].hasOwnProperty('actions')) {\n\t\t\t\tvar actions = entities[i].actions;\n\t\t\t\tfor (var j=0;j<actions.length;j++) {\n\t\t\t\t\tif (actions[j].trigger == 'interact') {\n\t\t\t\t\t\tdoAction(actions[j].action, entities[i].posX, entities[i].posY, entities[i], actions[j].data)\n\t\t\t\t\t}\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tif (!entities[i].active) {\n\t\t\tmoveGrid[entities[i].posY][entities[i].posX] = 0;\n\t\t\t//$(\"#entity-\" + i).fadeOut();\n\t\t}\n\t\t\t\n\t}\n\tconsole.log(movedChar);\n\treturn movedChar;\n}\n\nfunction attack(actionIndex) {\n\tconsole.log(\"Attacking!\");\n\tvar action = actions[actionIndex];\n\tvar roll = getRandomInt(1,20);\n\tvar attackSkill = action.entity.attackSkill || 1;\n\tvar defense = action.target.defense || 10;\n\tvar damage = action.entity.damage || 1;\n\tvar damageReduction = action.target.damageReduction || 0;\n\tif (roll + attackSkill > defense) {\n\t\taction.target.hp -= damage;\n\t\tplaySound(\"sounds/sword-strike.mp3\");\n\t\tshowMessage(\"Hit for \" + damage + \". \" + action.target.hp + \"hp left!\");\n\t\tshowText(\"-\" + damage, 0xDD0000, action.target.spriteContainer.x, action.target.spriteContainer.y - 10);\n\t\tif (action.target.hp < 1) {\n\t\t\taction.target.active = false;\n\t\t\t//moveGrid[action.target.x][action.target.y] = 0;\n\t\t\tshowMessage(action.target.name + \" died.\");\n\t\t}\n\t} else {\n\t\tplaySound(\"sounds/miss.mp3\");\n\t\tshowMessage(\"Miss!\");\n\t\tshowText(\"miss\", 0xDDDDDD, action.target.spriteContainer.x, action.target.spriteContainer.y - 10);\n\t}\n}\n\nfunction addGold(amount, display = true) {\n\tentities[characterID].gold += amount;\n\t$(\"#gold-count\").text(entities[characterID].gold);\n\tif (display) {\n\t\tshowMessage(\"Added \" + amount + \" gold\", 2);\n\t\tshowText(amount + \" gold\", 0xDEDE39, entities[characterID].spriteContainer.position.x, entities[characterID].spriteContainer.position.y);\n\t}\n}\n\nfunction addItem(name, quantity = 1) {\n\tinventory.push({name: name, quantity: quantity});\n\tdrawInv();\n\tif (quantity > 1) {\n\t\tshowMessage(\"Picked up \" + name + \" x\" + quantity, 2);\n\t\tshowText(name + \" x\" + quantity, 0xDEDE39, entities[characterID].spriteContainer.position.x, entities[characterID].spriteContainer.position.y + 15);\n\t} else {\n\t\tshowMessage(\"Picked up \" + name, 2);\n\t\tshowText(name, 0xDEDE39, entities[characterID].spriteContainer.position.x, entities[characterID].spriteContainer.position.y + 15);\n\t}\n}\n\nfunction checkInventory(itemName, remove = false) {\n\tfor (var i=0;i<inventory.length;i++) {\n    \tif (inventory[i].name == itemName) {\n    \t\tif (remove) {\n    \t\t\tinventory.splice(i, 1);\n    \t\t\tshowMessage('Removed ' + itemName, 2);\n    \t\t\tdrawInv();\n    \t\t}\n    \t\treturn true;\n    \t}\n  \t}\n  \treturn false;\n}\n\nfunction drawInv() {\n\t$(\"#inventory\").empty();\n\tfor(var i=0;i<inventory.length;i++) {\n\t\t$(\"#inventory\").append(\"<div class='item'>\" + inventory[i].name + \"</div>\");\n\t}\n}\n\nfunction showMessage(text, type = 1, posX = entities[characterID].spriteContainer.position.x, posY = entities[characterID].spriteContainer.position.y) {\n\ttext = text.charAt(0).toUpperCase() + text.slice(1);\n\tvar message = '<div>' + text +'</div>';\n\tif (type == 2)\n\t\tmessage = '<div style=\"color:rgb(255, 255, 121);\">' + text +'</div>';\n\t$('#message-log').append(message);\n\t$('#message-log').scrollTop($('#message-log')[0].scrollHeight);\n\t/*\n\tvar text;\n\tif (type == 1) \n\t\ttext = new PIXI.Text(text,{fontFamily : 'Lucida Console, Monaco, monospace', fontSize: 12, fill : 0xDEDE39, align : 'center', dropShadow: true, dropShadowDistance: 1,});\n\tif (type == 2)\n\t\ttext = new PIXI.Text(text,{fontFamily : 'Arial, Gadget, sans-serif', fontSize: 16, fill : 0xFFFFFF, align : 'center', dropShadow: true, dropShadowDistance: 1,});\n\ttext.position.x = posX;\n\ttext.position.y = posY;\n\tif (messages.length > 0) {\n\t\tif (messages[messages.length - 1].position.y == charSprite.position.y) {\n\t\t\ttext.position.y = charSprite.position.y + 15;\n\t\t}\n\t}\n\ttext.anchor.x = 0.5;\n\ttext.anchor.y = 0.5;\n\tmessages.push(text);\n\tstage.addChild(messages[messages.length - 1]);\n\t*/\n}\n\nfunction showText(text, color = 0xDEDE39, posX = entities[characterID].spriteObj.position.x, posY = entities[characterID].spriteObj.position.y) {\n\tvar message = new PIXI.Text(text,{fontFamily : 'Lucida Console, Monaco, monospace', fontSize: 14, fill : color, align : 'center', dropShadow: true, dropShadowDistance: 2,});\n\tmessage.position.x = posX;\n\tmessage.position.y = posY;\n\tmessage.anchor.x = 0.5;\n\tmessage.anchor.y = 0.5;\n\tmessages.addChild(message);\n}\n\nfunction inspectTile(xPos, yPos) {\n\tfor (var i=0;i<entities.length;i++) {\n\t\tif (entities[i].posX == xPos && entities[i].posY == yPos) {\n\t\t\tconsole.log(entities[i].name + \" at \" + xPos + \",\" + yPos);\n\t\t}\n\t}\n\tvar tileID = tileGrid[xPos][yPos];\n\tconsole.log(tileTypes[tileID].name + \"(\" + tileID + \") Solid: \" + tileTypes[tileID].solid)\n}\n\nfunction findPath(xPos, yPos, entityID = 0) {\n\tvar easystar = new EasyStar.js();\n    easystar.setGrid(moveGrid);\n    easystar.setAcceptableTiles([0]);\n    \n    //If next to solid entity, interact instead of pathfinding\n    if (Math.abs(entities[entityID].posX - xPos) == 1 && entities[entityID].posY == yPos && checkForEntity(xPos, yPos)) {\n    \tmoveChar(xPos, yPos);\n    \tentities[entityID].moveX = -1;\n    \treturn;\n    }\n    if (Math.abs(entities[entityID].posY - yPos) == 1 && entities[entityID].posX == xPos && checkForEntity(xPos, yPos)) {\n    \tmoveChar(xPos, yPos);\n    \tentities[entityID].moveX = -1;\n    \treturn;\n    }\n    easystar.findPath(entities[entityID].posX, entities[entityID].posY, xPos, yPos, function( path ) {\n    \ttry {\n    \t\tif (path[1] != null) {\n    \t\t\tmoveChar(path[1].x, path[1].y);\n    \t\t} else {\n    \t\t\tentities[entityID].moveX = -1;\n    \t\t\treturn;\n    \t\t}\n    \t}\n    \tcatch(err) {\n    \t\tconsole.log('Invalid path;');\n    \t\tentities[entityID].moveX = -1;\n    \t\treturn;\n    \t}\n    \t/*\n   \t\tif (path[2] != null && !character.doneMoving) {\n\t\t\t//setTimeout( function() {\n\t\t\t//\tfindPath(xPos, yPos);\n\t\t\t\t//}, 200);\n\t\t\t} else {\n\t\t\t\tcharacter.doneMoving = true;\n\t\t\t\tcharacter.moveX = -1;\n\t\t\t} */\n\t});\n\teasystar.calculate();\n\tif (tempGrid.length > 0) {\n\t\tmoveGrid[tempGrid[1]][tempGrid[0]] = 0;\n\t\ttempGrid = [];\n\t}\n}\n\nfunction checkForEntity(x, y) {\n\t//console.log(\"Checking...!\");\n\tfor (var i=0;i<entities.length;i++) {\n\t\tif (entities[i].posX == x && entities[i].posY == y && entities[i].active && entities[i].solid) {\n\t\t\treturn entities[i];\n\t\t}\n\t}\n\tif (entities[characterID].x == x && entities[characterID].y == y) {\n\t\t\treturn entities[characterID];\n\t}\n\treturn false;\n}\n\nfunction isHostile(faction, ownFaction) {\n\tif (faction == \"undead\")\n\t\treturn true;\n\tif (ownFaction == \"undead\")\n\t\treturn true;\n\treturn false;\n}\n\nfunction playSound(fileLoc, delay = 0) {\n\tif (sounds.hasOwnProperty(fileLoc)) {\n\t\tconsole.log(\"Playing cached sound.\")\n\t\tsounds[fileLoc].volume = 0.5 + (getRandomInt(0, 5)/10);\n\t\tsounds[fileLoc].volume *= sound;\n\t\tsounds[fileLoc].playbackRate = 1 + ((getRandomInt(0, 4) - 2)/10);\n\t\tsetTimeout(function() { sounds[fileLoc].play(); }, delay);\n\t} else {\n\t\tvar audio = new Audio(fileLoc);\n\t\taudio.volume = 0.5 + (getRandomInt(0, 5)/10);\n\t\taudio.volume *= sound;\n\t\taudio.playbackRate = 1 + ((getRandomInt(0, 4) - 2)/10);\n\t\tsetTimeout(function() { audio.play(); }, delay);\n\t}\n}\n\nfunction playMusic(fileLoc) {\n\tmusic = new Audio(fileLoc);\n\tmusic.loop = true;\n\tif (getCookie('music') != 'mute')\n\t\tmusic.play();\n}\n\nvar Action = function(entity, type, target = null, data = null, repeat = false) {\n\tthis.entity = entity;\n\tthis.target = target;\n\tthis.type = type;\n\tthis.data = data;\n\tthis.repeat = repeat;\n\tthis.lastRun = 0;\n\tthis.active = true;\n\n\tactions.push(this);\n};\n\nvar EntityAction = function(entityID, type, target = null, data = null, repeat = false) {\n\tthis.entity = entity;\n\tthis.target = target;\n\tthis.type = type;\n\tthis.data = data;\n\tthis.repeat = repeat;\n\tthis.lastRun = 0;\n\tthis.active = true;\n\n\tentities[entityID].actions.push(this);\n}\n\nfunction doAction(type, x, y, entity = null, text = '', repeat = false) {\n\tif (type == \"say\") {\n\t\tif (entity)\n\t\t\tshowMessage(entity.name + ': ' + text);\n\t\telse\n\t\t\tshowMessage(text);\n\t}\n};\n\nfunction animate() {\n\t    // start the timer for the next animation loop\n\t    requestAnimationFrame(animate);\n\t\n\t    //charSprite.rotation += 0.01;\n\t\t/*\n\t    var charSpriteX = (character.spriteObj.position.x - 2 - Math.round(tileSize/2))/tileSize;\n\t    var charSpriteY = (character.spriteObj.position.y - 2 - Math.round(tileSize/2))/tileSize;\n\n\t    if (charSpriteX != character.x) {\n\t    \tcharacter.spriteObj.position.x += (character.x - charSpriteX) * 4.0;\n\t    }\n\t    if (charSpriteY != character.y) {\n\t    \tcharacter.spriteObj.position.y += (character.y - charSpriteY) * 4.0;\n\t    } */\n\t    \n\t    for (var i=0;i<entities.length;i++) {\n\t    \t//Fade out inactive entities\n\t    \tif (entities[i].active == false && entities[i].spriteObj.visible == true) {\n\t    \t\tentities[i].spriteContainer.alpha += -0.1;\n\t    \t\tif (entities[i].spriteContainer.alpha < 0.1) {\n\t    \t\t\tentities[i].spriteContainer.visible == false;\n\t    \t\t}\n\t    \t}\n\n\t    \tif (['decor', 'container', 'gold', 'door'].indexOf(entities[i].type) > -1)\n\t    \t\tcontinue;\n    \t\t//var entitySpriteX = (entities[i].spriteContainer.position.x - 1 - Math.round(tileSize/2))/tileSize;\n    \t\tvar entitySpriteX = entities[i].posX * tileSize + Math.abs(tileSize/2) + 2;\n\t\t    //var entitySpriteY = (entities[i].spriteContainer.position.y - 1 - Math.round(tileSize/2))/tileSize;\n\t\t    var entitySpriteY = entities[i].posY * tileSize + Math.abs(tileSize/2) + 2;\n\t\t\n\t\t    if (Math.abs(entities[i].spriteContainer.position.x - entitySpriteX) >= 0.5) {\n\t\t    \tentities[i].spriteContainer.position.x += (entitySpriteX - entities[i].spriteContainer.position.x) * 0.16;\n\t\t    \tconsole.log(entitySpriteX + \" \" + entities[i].spriteContainer.position.x);\n\t\t    }\n\t\t    if (Math.abs(entitySpriteY - entities[i].spriteContainer.position.y) >= 0.5) {\n\t\t    \tentities[i].spriteContainer.position.y += (entitySpriteY - entities[i].spriteContainer.position.y) * 0.16;\n\t\t    }\n\n\t    }\n\t    \n\t    for (var i=0;i<messages.children.length;i++) {\n\t    \tvar message = messages.getChildAt(i);\n\t    \tmessage.alpha += -0.001 * (10/message.alpha);\n\t    \tif (message.alpha < 0.1) {\n\t\t\t\tmessage.visible = false;\n\t\t\t}\n\t    }\n\t    /* //Fade text\n\t    for (var i=0;i<messages.length;i++) {\n\t\t\tmessages[i].alpha += -0.002 * (1/messages[i].alpha);\n\t\t\tif (messages[i].alpha < 0.1) {\n\t\t\t\tmessages[i].visible = false;\n\t\t\t}\n\t\t}\n\t\tif (messages.length > 0) {\n\t\t\tif (messages[0].visible == false) {\n\t\t\t\tstage.removeChild(messages[0]);\n\t\t\t\tmessages.splice(0,1);\n\t\t\t}\n\t\t}\n\t\t*/\n\t    // this is the main render call that makes pixi draw your container and its children.\n\t    renderer.render(stage);\n}\n\n\n//From http://stackoverflow.com/questions/7193011/javascript-game-loop-that-runs-at-the-same-speed/7193571#7193571\nvar GameTimer = (function () {\n    var gameTimer = function (opts) {\n        var self = this;\n        opts = opts || {};\n        opts.stepInterval = opts.stepInterval || 200;\n\n        var callbacks = {};\n        var stepInterval= opts.stepInterval; // ms\n\n        this.domReady = function () {\n            setInterval(step, stepInterval);\n        };\n        \n        this.registerService = function(callback){\n            callbacks[callback] = callback;\n        };\n        \n        this.removeService = function(){\n            delete callbacks[callback];\n        };\n\n        var step = function () {\n            for(var id in callbacks){\n                callbacks[id]();\n            }\n        };\n    };\n\n    return new gameTimer;\n})();\n\nvar eachTick = function(){\n \n    for (var i=0;i<entities.length;i++) {\n    \t//Move Entity\n    \tif (entities[i].moveX != -1) {\n    \t\t//character.x = character.moveX;\n    \t\t//character.y = character.moveY;\n    \t\tfindPath(entities[i].moveX, entities[i].moveY, i);\n   \t\t}\n    \n    \t//Attack Target\n    \t\n    \t//Perform Actions\n    \tif(entities[i].actions.length > 0 && entities[i].active) {\n    \t\trunEntityActions(i);\n    \t}\n    }\n    \n    runActions();\n    \n    for (var i=0;i<events.length;i++) {\n    \n    }\n};\n\nfunction runEntityActions(entityID) {\n\tvar entity = entities[entityID];\n\tfor (var i=0;i<entity.actions.length;i++) {\n\t\tif (entity.actions[i].active == false)\n\t\t\tcontinue;\n\t\t\n\t}\n}\n\nfunction runActions() {\n\tfor (var i=0;i<actions.length;i++) {\n\t\tif (actions[i].active == false)\n\t\t\tcontinue;\n\t\tvar currentTime = new Date().getTime();\n    \t//console.log(actions[i].type);\n    \t//console.log(currentTime - actions[i].lastRun);\n    \tswitch(actions[i].type) {\n    \t\tcase 'attack':\n    \t\t\tif(actions[i].target.hp < 1 || actions[i].entity.hp < 1)\n    \t\t\t\tactions[i].active = false;\n    \t\t\tif(currentTime - actions[i].lastRun > 1000 && actions[i].active == true) {\n    \t\t\t\tattack(i);\n    \t\t\t\tactions[i].lastRun = currentTime;\n    \t\t\t}\n    \t\t\tbreak;\n    \t\tcase 'say':\n    \t\t\n    \t\t\tbreak;\n    \t\tcase 'entityNear':\n    \t\t\t//console.log('entityNear');\n    \t\t\tvar radius = parseInt(actions[i].data,10);\n    \t\t\t//console.log(radius + \" \" + actions[i].entity.posX + \" \" + actions[i].entity.posY);\n    \t\t\t\n\t\t\t\tfor (var x = actions[i].entity.posX - radius; x <= actions[i].entity.posX + radius; x++) {\n\t\t\t\t\t//console.log(x + \" \" + (actions[i].entity.posX + radius));\n\t\t\t\t\tfor (var y = actions[i].entity.posY - radius; y <= actions[i].entity.posY + radius; y++) {\n\t\t\t\t\t\t//console.log(x + ' ' + y);\n\t\t\t\t\t\tif(checkForEntity(x,y) && !(actions[i].entity.posY == y && actions[i].entity.posX == x)) {\n\t\t\t\t\t\t\ttarget = checkForEntity(x,y);\n\t\t\t\t\t\t\tif (isHostile(target.faction, actions[i].entity.faction)) {\n\t\t\t\t\t\t\t\tnew Action(actions[i].entity, \"attack\", target, null, true);\n\t\t\t\t\t\t\t\tactions[i].active = false;\n\t\t\t\t\t\t\t}\n\t\t\t\t\t\t} \n\t\t\t\t\t}\n\t\t\t\t} \n    \t\t\tbreak;\n    \t\tdefault:\n    \t\t\tconsole.log(\"Unknown action type!\");\n    \t\t\tbreak;\n    \t}\n    }\n}\n\nfunction resourceLoader() {\n\tvar sprites = [];\n\tfor (var i=0;i<tileTypes.length;i++) {\n\t\tif (sprites.indexOf(tileTypes[i].sprite) == -1) {\n\t\t\tsprites.push(tileTypes[i].sprite);\n\t\t\t//console.log(tileTypes[i].sprite);\n\t\t}\n\t}\n\tfor (var i=0;i<entities.length;i++) {\n\t\t//console.log(entities[i].sprite);\n\t\tif (!entities[i].sprite)\n\t\t\tcontinue;\n\t\tif (sprites.indexOf(entities[i].sprite) == -1 && !entities[i].hasOwnProperty('animate')) {\n\t\t\tsprites.push(entities[i].sprite);\n\t\t\t//console.log(entities[i].sprite);\n\t\t} else {\n\t\t\tvar frames = entities[i].sprite.split(\",\");\n\t\t\tfor (var f=0;f<frames.length;f++) {\n\t\t\t\tif (sprites.indexOf(frames[f]) == -1) {\n\t\t\t\t\tsprites.push(frames[f]);\n\t\t\t\t\t//console.log(frames[f]);\n\t\t\t\t}\n\t\t\t}\n\t\t}\n\t\tif (entities[i].hasOwnProperty('sprite2')) {\n\t\t\tif (sprites.indexOf(entities[i].sprite2) == -1 && entities[i].sprite2) {\n\t\t\t\tsprites.push(entities[i].sprite2);\n\t\t\t}\n\t\t}\n\t\tif (entities[i].hasOwnProperty('sound')) {\n\t\t\t//Preload entity sounds\n\t\t\tcacheSound(entities[i].sound);\n\t\t\t/*\n\t\t\tif (!sounds.hasOwnProperty(entities[i].sound)) {\n\t\t\t\tvar audio = new Audio();\n    \t\t\taudio.src = entities[i].sound;\n    \t\t\taudio.preload = \"auto\";\n    \t\t\tsounds[entities[i].sound] = audio;\n\t\t\t\t//var entitySound = new sound();\n\t\t\t\t//sounds.push(entitySound);\n\t\t\t\t\n\t\t\t} */\n\t\t}\n\t}\n\tfor (var i=0;i<sprites.length;i++) {\n\t\t//console.log(sprites[i]);\n\t\tPIXI.loader.add(sprites[i]);\n\t}\n\t/*\n\tPIXI.loader.add('sprites/torch-fr1.png');\n\tPIXI.loader.add('sprites/torch-fr2.png');\n\tPIXI.loader.add('sprites/torch-fr3.png');\n\t*/\n\t//for (var i=0;i<entities.length;i++) {\n\t//\tPIXI.loader.add(entities[i].sprite);\n\t//}\n\t//PIXI.loader.add(character.sprite);\n\n\n\t//Load sounds\n\tcacheSound('sounds/bag-open.mp3');\n\tcacheSound('sounds/chest-open.mp3');\n\tcacheSound('sounds/coins.mp3');\n\tcacheSound('sounds/grunt.mp3');\n\tcacheSound('sounds/opendoor.mp3');\n\tcacheSound('sounds/locked.mp3');\n\tcacheSound('sounds/miss.mp3');\n\tcacheSound('sounds/sword-strike.mp3');\n}\n\nfunction cacheSound(fileLoc) {\n\tif (!sounds.hasOwnProperty(fileLoc)) {\n\t\tvar audio = new Audio();\n\t\taudio.src = fileLoc;\n\t\taudio.preload = \"auto\";\n\t\tsounds[fileLoc] = audio;\n\t\t//var entitySound = new sound();\n\t\t//sounds.push(entitySound);\n\t}\n}\n\nfunction getRandomInt(min, max) {\n  min = Math.ceil(min);\n  max = Math.floor(max);\n  return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\n// Modified from http://www.w3schools.com/js/js_cookies.asp\nfunction setCookie(cname, cvalue, years = 5) {\n    var d = new Date();\n    d.setTime(d.getTime() + (years*365*24*60*60*1000));\n    var expires = \"expires=\"+d.toUTCString();\n    document.cookie = cname + \"=\" + cvalue + \"; \" + expires;\n}\n\nfunction getCookie(cname) {\n    var name = cname + \"=\";\n    var ca = document.cookie.split(';');\n    for(var i = 0; i < ca.length; i++) {\n        var c = ca[i];\n        while (c.charAt(0) == ' ') {\n            c = c.substring(1);\n        }\n        if (c.indexOf(name) == 0) {\n            return c.substring(name.length, c.length);\n        }\n    }\n    return \"\";\n}",
 			"file": "game.js",
-			"file_size": 33931,
-			"file_write_time": 131190748203873461,
 			"settings":
 			{
-				"buffer_size": 32855,
+				"buffer_size": 36065,
 				"encoding": "UTF-8",
 				"line_ending": "Windows"
 			}
 		},
 		{
-			"contents": "{\n\t\"title\": \"Old Prison\",\n\t\"levelHeight\" : 8,\n\t\"levelWidth\" : 16,\n\t\"backgroundTile\" : 0,\n\t\"spawnX\" : 4,\n\t\"spawnY\" : 6,\n\t\"music\" : \"music/Enchanted Festival.mp3\",\n\t\"tileMap\" : [\n\t\t[2,3,3,3,3,3,3,3,2,3,3,2,0,0,0,0],\n\t\t[2,5,5,5,5,5,5,5,2,5,5,2,0,0,0,0],\n\t\t[2,5,5,5,5,5,5,5,2,5,5,2,0,0,0,0],\n\t\t[2,5,5,5,5,5,5,5,5,5,5,2,0,0,0,0],\n\t\t[2,5,5,5,5,5,5,5,4,5,5,2,0,0,0,0],\n\t\t[2,5,5,5,5,5,5,5,2,5,5,5,0,0,0,0],\n\t\t[2,5,5,5,5,5,5,5,2,5,5,4,0,0,0,0],\n\t\t[2,4,4,4,4,4,4,4,2,4,4,2,0,0,0,4]\n\t],\n\t\"tileTypes\" : [\n\t\t{\"name\" : \"grass\", \"solid\" : false, \"z\" : 0, \"sprite\" : \"tiles/hyptosis-grass.png\"},\n\t\t{\"name\" : \"rocks\", \"solid\" : true, \"z\" : 0, \"sprite\" : \"tiles/hyptosis-stonewall.png\"},\n\t\t{\"name\" : \"wall\", \"solid\" : true, \"z\" : 0, \"sprite\" : \"tiles/hyptosis-brickwall.png\"},\n\t\t{\"name\" : \"wall\", \"solid\" : true, \"z\" : 0, \"sprite\" : \"tiles/hyptosis-brickwallstone.png\"},\n\t\t{\"name\" : \"wall\", \"solid\" : true, \"z\" : 101, \"sprite\" : \"tiles/hyptosis-brickwalltop.png\"},\n\t\t{\"name\" : \"stone floor\", \"solid\" : false, \"z\" : 0, \"sprite\" : \"tiles/hyptosis-stone-floor.png\"}\n\t],\n\t\"entities\" : [\n\t\t{\"posX\" : 15, \"posY\" : 3, \"sprite\" : \"sprites/bush.png\", \"type\" : \"decor\", \"name\" : \"bush\", \"shadow\" : true, \"randomOffset\" : 8, \"sound\" : \"sounds/crunch.mp3\"},\n\t\t{\"posX\" : 14, \"posY\" : 1, \"sprite\" : \"sprites/bush.png\", \"type\" : \"decor\", \"name\" : \"bush\", \"shadow\" : true, \"randomOffset\" : 8, \"sound\" : \"sounds/crunch.mp3\"},\n\t\t{\"posX\" : 12, \"posY\" : 0, \"sprite\" : \"sprites/bush.png\", \"type\" : \"decor\", \"name\" : \"bush\", \"shadow\" : true, \"randomOffset\" : 8, \"sound\" : \"sounds/crunch.mp3\"},\n\t\t{\"posX\" : 14, \"posY\" : 7, \"sprite\" : \"sprites/bush.png\", \"type\" : \"decor\", \"name\" : \"bush\", \"shadow\" : true, \"randomOffset\" : 8, \"sound\" : \"sounds/crunch.mp3\"},\n\t\t{\"posX\" : 6, \"posY\" : 6, \"sprite\" : \"sprites/torch-fr1.png,sprites/torch-fr2.png,sprites/torch-fr3.png\", \"type\" : \"decor\", \"name\" : \"torch\", \"shadow\" : true, \"randomOffset\" : 8, \"animate\" : true},\n\t\t{\"posX\" : 2, \"posY\" : 4, \"sprite\" : \"sprites/gold-coins.png\", \"type\" : \"gold\", \"name\" : \"gold\", \"quantity\" : 7, \"randomOffset\" : 8},\n\t\t{\"posX\" : 4, \"posY\" : 2, \"sprite\" : \"sprites/gold-coins.png\", \"type\" : \"gold\", \"name\" : \"gold\", \"quantity\" : 9, \"randomOffset\" : 8},\n\t\t{\"posX\" : 10, \"posY\" : 1, \"sprite\" : \"sprites/chest-closed.png\", \"sprite2\" : \"sprites/chest-open.png\", \"solid\" : true, \"type\" : \"container\", \"name\" : \"chest\", \"item\" : \"key\", \"gold\" : 3},\n\t\t{\"posX\" : 10, \"posY\" : 6, \"sprite\" : \"sprites/dagger.png\", \"type\" : \"item\", \"name\" : \"dagger\", \"shadow\" : true},\n\t\t{\"posX\" : 1, \"posY\" : 6, \"sprite\" : \"sprites/kobold.png\", \"solid\" : true, \"type\" : \"npc\", \"name\" : \"kobold prisoner\", \"faction\" : \"kobold\", \"hp\" : 5, \"sound\" : \"sounds/grunt.mp3\", \n\t\t\t\"actions\" : [\n\t\t\t\t{\"trigger\" : \"interact\", \"action\" : \"say\", \"repeat\" : \"false\", \"active\" : \"true\", \"data\" : \"Hello!\"}]},\n\t\t{\"posX\" : 11, \"posY\" : 5, \"sprite\" : \"sprites/door.png\", \"sprite2\" : \"sprites/door2.png\", \"solid\" : \"true\", \"type\" : \"door\", \"name\" : \"door\"},\n\t\t{\"posX\" : 13, \"posY\" : 7, \"sprite\" : \"sprites/skeleton.png\", \"solid\" : true, \"type\" : \"npc\", \"name\" : \"skeleton\", \"faction\" : \"undead\", \"hp\" : \"10\",\n\t\t\t\"actions\" : [\n\t\t\t\t{\"trigger\" : \"entityNear\"}]}\n\n\t]\n}",
+			"file": "level-maker.html",
+			"settings":
+			{
+				"buffer_size": 3657,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"contents": "var tileSize = 33;\nvar levelWidth = 8;\nvar levelHeight = 8;\nvar bgTileID = 0;\nvar loaded = false;\nvar tileSelection = 0;\n\nvar tileList = [];\n\nvar tileGrid = [];\n\nvar renderer = new PIXI.autoDetectRenderer(8 * tileSize + 3 , 8 * tileSize + 3, {backgroundColor:\"0x444444\"});\nrenderer.roundPixels = true;\nvar stage = new PIXI.Container();\nvar backgroundLayer = new PIXI.Container();\nvar tileLayer = new PIXI.Container();\nvar highlightLayer = new PIXI.Container();\nvar entityLayer = new PIXI.Container();\nvar charLayer = new PIXI.Container();\nvar overLayer = new PIXI.Container();\nvar messages = new PIXI.Container();\nstage.addChild(backgroundLayer);\nstage.addChild(tileLayer);\nstage.addChild(highlightLayer);\nstage.addChild(entityLayer);\nstage.addChild(charLayer);\nstage.addChild(overLayer);\nstage.addChild(messages);\n\n//PIXI.loader.add(\"tiles/hyptosis-grass.png\");\nvar loader = PIXI.loader;\nvar loader = new PIXI.loaders.Loader(); // you can also create your own if you want\n\nvar highlightBox = new PIXI.Graphics();\n\nvar music;\nvar sound = 1;\nvar sounds = {};\n\n$(document).ready(function(){\n\t\n\t//document.body.appendChild(renderer.view);\n\t$('#game-area-wrapper').append(renderer.view);\n\t\n\tif (getCookie('music') != '') {\n\t\t$('#mute-music img').css('opacity', 0.4);\n\t\t//music.pause();\n\t}\n\tif (getCookie('sound') != '') {\n\t\t$('#mute-sound img').css('opacity', 0.4);\n\t\tsound = 0;\n\t}\n\n\t$(\"#whForm\").submit(function(e) {\n\t\te.preventDefault();\n        levelWidth = $(\"#levelWidth\").val();\n        levelHeight = $(\"#levelHeight\").val();\n        bgTileID = $(\"#bgTileID\").val();\n        //console.log($(\"#tileGridJSON\").val());\n        tileGrid = JSON.parse($(\"#tileGridJSON\").val());\n        renderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);\n        createTileGrid();\n        drawTiles();\n    });\n\n\t$.when (\n\t\t$.getJSON('tiles.json', {}, function() {}),\n\t\t$.getJSON('entities.json', {}, function() {})\n\t\t//$.getJSON('character.json', {}, function() {}),\n\t\t//$.getJSON('map1.json', {}, function() {})\n\t\t//$.ajax({url: \"map1.xml\", success: function() {}, cache: false})\n\t).done(function(arg1, arg2){//arg1, arg2){\n\t\tloadTiles(arg1[0]);\n\t\tloadEntities(arg2[0]);\n    \t//loadCharacter(arg1);\n    \t//loadMapJson(arg2);\n    \t//loadMap(arg3);\n\t});\n\t\n\t//Make arrow keys move character\n\t$(window).keypress(function(e) {\n\t  //if (loaded && character.moveX == -1) {\n       \tvar ev = e || window.event;\n       \tvar key = ev.keyCode || ev.which;\n       \tif (key == \"38\") {\n       \t}\n\t\tif (key == \"40\") {\n       \t}\n\t\tif (key == \"37\") {\n       \t}\n\t\t\n\t\tif (key == \"39\") {\n       \t}\n\t // }\n\t});\n\t\n\t//No right click on canvas (Add custom menu?)\n\t$('#game-area-wrapper canvas').bind('contextmenu', function(e){\n    \treturn false;\n\t}); \n\n\t$(\"#game-area-wrapper canvas\").click(function(e){\n\t\tvar xClickPos = Math.floor((e.pageX - this.offsetLeft) / tileSize);\n    \tvar yClickPos = Math.floor((e.pageY - this.offsetTop) / tileSize);\n    \tif (xClickPos > levelWidth - 1)\n    \t\txClickPos--;\n    \tif (yClickPos > levelHeight - 1)\n    \t\tyClickPos--;\n    \tvar text = \"x: \" + xClickPos + \"y: \" + yClickPos;\n\t\t//console.log(\"x: \" + xClickPos + \"y: \" + yClickPos);\n\t\tvar message = '<div style=\"color:rgb(255, 255, 121);\">' + text +'</div>';\n\t\t$('#message-log').append(message);\n\t\t$('#message-log').scrollTop($('#message-log')[0].scrollHeight);\n\t\tif (loaded) {\n\t\t\ttileGrid[xClickPos][yClickPos] = tileSelection;\n\t\t\tconsole.log(tileGrid[xClickPos][yClickPos]);\n\t\t\tcreateTileGrid();\n\t\t\tdrawTiles();\n\t\t}\n\t\t//TODO: Optional inspect\n\t\t//inspectTile(xClickPos, yClickPos);\n\t\t/*\n\t\tif (entities[characterID].moveX == -1) {\n\t\t\tentities[characterID].moveX = xClickPos;\n\t\t\tentities[characterID].moveY = yClickPos;\n\t\t\thighlightBox.position.x = xClickPos * tileSize;\n\t\t\thighlightBox.position.y = yClickPos * tileSize - 1;\n\t\t\thighlightBox.visible = true;\n\t\t} */\n\t});\n\t$(\"#tileList\").click(function(e){\n\t\tconsole.log(e.target.tagName);\n\t\tvar liID;\n\t\tif (e.target.tagName == \"IMG\") {\n\t\t\tliID = e.target.parentElement.id;\n\t\t} else if (e.target.tagName == \"BUTTON\") {\n\t\t\t\n\t\t\treturn;\n\t\t} else {\n\t\t\tliID = e.target.id;\n\t\t}\n\t\ttileSelection = parseInt(liID.substr(5));\n\t\t$(\"#tileSelection\").html('<img src=\"' + tileList[tileSelection].path + '\">');\n\t});\n\t$(\"#mute-music\").click(function(e){\n\t\tif (music.paused) {\n\t\t\tmusic.play();\n\t\t\t$('#mute-music img').css('opacity', 1.0);\n\t\t\tsetCookie('music', '');\n\t\t} else {\n\t\t\tmusic.pause();\n\t\t\t$('#mute-music img').css('opacity', 0.4);\n\t\t\tsetCookie('music', 'mute');\n\t\t}\n\t});\n\t$(\"#mute-sound\").click(function(e){\n\t\tif (sound == 0) {\n\t\t\tsound = 1;\n\t\t\t$('#mute-sound img').css('opacity', 1.0);\n\t\t\tsetCookie('sound', '');\n\t\t} else {\n\t\t\tsound = 0;\n\t\t\t$('#mute-sound img').css('opacity', 0.4);\n\t\t\tsetCookie('sound', '0');\n\t\t}\n\t});\n}); \n\nfunction loadTiles(tileListJSON) {\n\tconsole.log(\"loadTiles()\");\n\t//console.log(tileList);\n\ttileList = tileListJSON;\n\tfor (var i=0;i<tileList.length;i++) {\n\t\tvar tileInfo = '<li class=\"tileInfo\" id=\"tile-' + i + '\"><img src=\"'+ tileList[i].path + '\"> ' + i + ' ' + tileList[i].name + '<button>+</button></li>';\n\t\tloader.add(tileList[i].name,tileList[i].path);\n\t\t$(\"#tileList\").append(tileInfo);\n\t}\n\t//loader.add('grass',\"tiles/hyptosis-grass.png\");\n\t//loader.once('complete',onAssetsLoaded);\n\tloader.on('complete', onLoad);\n\tloader.load();\n\tconsole.log(loader);\n}\n\nfunction loadEntities(entityList) {\n\tconsole.log(\"loadEntities()\");\n\n\tanimate();\n}\n\nfunction onLoad() {\n\tconsole.log(\"onLoad()\");\n\n\tloaded = true;\n\tcreateTileGrid();\n\tdrawTiles();\n}\n\nfunction createTileGrid() {\n\tfor (var i=0;i<levelWidth;i++) {\n\t\tif (typeof tileGrid[i] === 'undefined') {\n\t\t\ttileGrid.push([]);\n\t\t}\n\t\tfor (var j=0;j<levelHeight;j++) {\n\t\t\tif (typeof tileGrid[i][j] === 'undefined') {\n\t\t\t\ttileGrid[i][j] = 0;\n\t\t\t}\n\t\t}\n\t}\n\t$(\"#tileGridJSON\").val(JSON.stringify(tileGrid));\n}\n\nfunction drawTiles() {\n\tconsole.log(\"drawTiles()\");\n\tif (loaded){\n\tbackgroundLayer.removeChildren();\n\tbackgroundLayer.cacheAsBitmap = false;\n\tfor (var i=0;i<levelWidth;i++) {\n\t\t\tfor (var j=0;j<levelHeight;j++) {\n\t\t\t\t//var colorMatrix = new PIXI.filters.ColorMatrixFilter();\n \t\t\t\t//Add slight random +/- contrast to tiles\n \t\t\t\t//colorMatrix.contrast((getRandomInt(0,10))/100, true);\n \t\t\t\t//colorMatrix.hue(getRandomInt(0,6)-3, true);\n\t\t\t\t\n\t\t\t\tvar tile = new PIXI.Sprite(loader.resources[tileList[bgTileID].name].texture);\n\t\t\t\ttile.position.x = i * tileSize + Math.floor(tileSize/2) + 2;\n\t\t\t\ttile.position.y = j * tileSize + Math.floor(tileSize/2) + 2;\n\t\t\t\ttile.scale.x = 1;\n\t\t\t\ttile.scale.y = 1;\n\t\t\t\ttile.anchor.x = 0.5;\n\t\t\t\ttile.anchor.y = 0.5;\n\t\t\t\t/*\n\t\t\t\tif (tileTypes[tileGrid[i][j]].hasOwnProperty(\"randomrotate\")) {\n\t\t\t\t\tvar rotateDeg = getRandomInt(0,3) * 90;\n\t\t\t\t\ttile.rotation = rotateDeg * Math.PI / 180;\n\t\t\t\t} */\n\t\t\t\t//tile.filters = [colorMatrix];\n\t\t\t\t//if (tileTypes[tileGrid[i][j]].z == 0) {\n\t\t\t\tbackgroundLayer.addChild(tile);\n\t\t\t\t//} else {\n\t\t\t\t//overLayer.addChild(tile);\n\t\t\t\t//}\n\t\t\t\tif (tileGrid[i][j] != 0) {\n\t\t\t\t\tvar tile2 = new PIXI.Sprite(loader.resources[tileList[tileGrid[i][j]].name].texture);\n\t\t\t\t\ttile2.position.x = i * tileSize + Math.floor(tileSize/2) + 2;\n\t\t\t\t\ttile2.position.y = j * tileSize + Math.floor(tileSize/2) + 2;\n\t\t\t\t\ttile2.scale.x = 1;\n\t\t\t\t\ttile2.scale.y = 1;\n\t\t\t\t\ttile2.anchor.x = 0.5;\n\t\t\t\t\ttile2.anchor.y = 0.5;\n\t\t\t\t\t//tile2.filters = [colorMatrix];\n\t\t\t\t\tbackgroundLayer.addChild(tile2);\n\t\t\t\t}\n\t\t\t}\n\t}\n\tbackgroundLayer.cacheAsBitmap = true;\n\t}\n}\n\nfunction getRandomInt(min, max) {\n  min = Math.ceil(min);\n  max = Math.floor(max);\n  return Math.floor(Math.random() * (max - min + 1)) + min;\n}\n\n// Modified from http://www.w3schools.com/js/js_cookies.asp\nfunction setCookie(cname, cvalue, years = 5) {\n    var d = new Date();\n    d.setTime(d.getTime() + (years*365*24*60*60*1000));\n    var expires = \"expires=\"+d.toUTCString();\n    document.cookie = cname + \"=\" + cvalue + \"; \" + expires;\n}\n\nfunction getCookie(cname) {\n    var name = cname + \"=\";\n    var ca = document.cookie.split(';');\n    for(var i = 0; i < ca.length; i++) {\n        var c = ca[i];\n        while (c.charAt(0) == ' ') {\n            c = c.substring(1);\n        }\n        if (c.indexOf(name) == 0) {\n            return c.substring(name.length, c.length);\n        }\n    }\n    return \"\";\n}\n\nfunction openTab(e, tabName) {\n    // Declare all variables\n    var i, tabcontent, tablinks;\n\n    // Get all elements with class=\"tabcontent\" and hide them\n    tabcontent = document.getElementsByClassName(\"tabcontent\");\n    for (i = 0; i < tabcontent.length; i++) {\n        tabcontent[i].style.display = \"none\";\n    }\n\n    // Get all elements with class=\"tablinks\" and remove the class \"active\"\n    tablinks = document.getElementsByClassName(\"tablinks\");\n    for (i = 0; i < tablinks.length; i++) {\n        tablinks[i].className = tablinks[i].className.replace(\" active\", \"\");\n    }\n\n    // Show the current tab, and add an \"active\" class to the link that opened the tab\n    document.getElementById(tabName).style.display = \"block\";\n    e.currentTarget.className += \" active\";\n}\n\nfunction animate() {\n\t    // start the timer for the next animation loop\n\t    requestAnimationFrame(animate);\n\n\t    // this is the main render call that makes pixi draw your container and its children.\n\t    renderer.render(stage);\n}",
+			"file": "level-maker.js",
+			"file_size": 9444,
+			"file_write_time": 131193431484657406,
+			"settings":
+			{
+				"buffer_size": 9192,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "tiles.json",
+			"settings":
+			{
+				"buffer_size": 1176,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "entities.json",
+			"settings":
+			{
+				"buffer_size": 20,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "character.json",
+			"settings":
+			{
+				"buffer_size": 281,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
+			"file": "game.html",
+			"settings":
+			{
+				"buffer_size": 1802,
+				"encoding": "UTF-8",
+				"line_ending": "Windows"
+			}
+		},
+		{
 			"file": "map1.json",
-			"file_size": 3143,
-			"file_write_time": 131190717506694917,
 			"settings":
 			{
-				"buffer_size": 3150,
+				"buffer_size": 3535,
 				"encoding": "UTF-8",
-				"line_ending": "Windows"
-			}
-		},
-		{
-			"file": "map1.xml",
-			"settings":
-			{
-				"buffer_size": 3437,
 				"line_ending": "Windows"
 			}
 		}
@@ -56,7 +107,7 @@
 				"Package Control: Install Package"
 			]
 		],
-		"width": 400.0
+		"width": 416.0
 	},
 	"console":
 	{
@@ -76,6 +127,8 @@
 	},
 	"file_history":
 	[
+		"/C/Users/Quad Core/Documents/GitHub/Everlasting/map1.xml",
+		"/C/Users/Quad Core/Documents/GitHub/Everlasting/everlasting.sublime-project"
 	],
 	"find":
 	{
@@ -93,6 +146,33 @@
 		"case_sensitive": false,
 		"find_history":
 		[
+			"tileTypes",
+			"onLoad",
+			"tileLayer",
+			"setLevel",
+			"animate",
+			"requestAnimationFrame",
+			"animate",
+			"renderer",
+			"loaded",
+			"console.log",
+			"\"attack\"",
+			"attack(",
+			"isHostile",
+			"animate",
+			"distance",
+			"factions",
+			"eachTick",
+			"var Entity",
+			"Entity",
+			"entityIneract",
+			"attack",
+			"hasOwn",
+			"createMove",
+			"attack",
+			"checkForEntity",
+			"CheckForEntity",
+			"moveGrid",
 			"findPath",
 			"tempGrid",
 			"findPath",
@@ -117,7 +197,7 @@
 	"groups":
 	[
 		{
-			"selected": 0,
+			"selected": 7,
 			"sheets":
 			[
 				{
@@ -126,15 +206,28 @@
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 32855,
+						"buffer_size": 36065,
 						"regions":
 						{
+							"bookmarks":
+							{
+								"flags": 144,
+								"icon": "bookmark",
+								"regions":
+								[
+									[
+										30197,
+										30197
+									]
+								],
+								"scope": "bookmarks"
+							}
 						},
 						"selection":
 						[
 							[
-								468,
-								468
+								25381,
+								25381
 							]
 						],
 						"settings":
@@ -142,27 +235,139 @@
 							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax"
 						},
 						"translation.x": 0.0,
-						"translation.y": 45.0,
+						"translation.y": 11221.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 0,
+					"stack_index": 1,
 					"type": "text"
 				},
 				{
 					"buffer": 1,
-					"file": "map1.json",
+					"file": "level-maker.html",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3150,
+						"buffer_size": 3657,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3141,
-								3141
+								3432,
+								3432
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/HTML/HTML.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 1595.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 3,
+					"type": "text"
+				},
+				{
+					"buffer": 2,
+					"file": "level-maker.js",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 9192,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								4034,
+								4034
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JavaScript.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 4,
+					"type": "text"
+				},
+				{
+					"buffer": 3,
+					"file": "tiles.json",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 1176,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								144,
+								144
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JSON.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 5,
+					"type": "text"
+				},
+				{
+					"buffer": 4,
+					"file": "entities.json",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 20,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								16,
+								16
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JSON.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 6,
+					"type": "text"
+				},
+				{
+					"buffer": 5,
+					"file": "character.json",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 281,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								157,
+								157
 							]
 						],
 						"settings":
@@ -171,39 +376,67 @@
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 90.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
 					"stack_index": 2,
 					"type": "text"
 				},
 				{
-					"buffer": 2,
-					"file": "map1.xml",
+					"buffer": 6,
+					"file": "game.html",
 					"semi_transient": false,
 					"settings":
 					{
-						"buffer_size": 3437,
+						"buffer_size": 1802,
 						"regions":
 						{
 						},
 						"selection":
 						[
 							[
-								3145,
-								3285
+								0,
+								1802
 							]
 						],
 						"settings":
 						{
-							"syntax": "Packages/XML/XML.sublime-syntax",
+							"syntax": "Packages/HTML/HTML.sublime-syntax"
+						},
+						"translation.x": 0.0,
+						"translation.y": 0.0,
+						"zoom_level": 1.0
+					},
+					"stack_index": 7,
+					"type": "text"
+				},
+				{
+					"buffer": 7,
+					"file": "map1.json",
+					"semi_transient": false,
+					"settings":
+					{
+						"buffer_size": 3535,
+						"regions":
+						{
+						},
+						"selection":
+						[
+							[
+								969,
+								969
+							]
+						],
+						"settings":
+						{
+							"syntax": "Packages/JavaScript/JSON.sublime-syntax",
 							"translate_tabs_to_spaces": false
 						},
 						"translation.x": 0.0,
-						"translation.y": 180.0,
+						"translation.y": 0.0,
 						"zoom_level": 1.0
 					},
-					"stack_index": 1,
+					"stack_index": 0,
 					"type": "text"
 				}
 			]
@@ -252,7 +485,7 @@
 	"project": "everlasting.sublime-project",
 	"replace":
 	{
-		"height": 62.0
+		"height": 42.0
 	},
 	"save_all_on_build": true,
 	"select_file":
@@ -261,6 +494,10 @@
 		"last_filter": "",
 		"selected_items":
 		[
+			[
+				"",
+				"C:\\Users\\Quad Core\\Documents\\GitHub\\Everlasting\\character.json"
+			]
 		],
 		"width": 0.0
 	},

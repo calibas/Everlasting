@@ -1,0 +1,66 @@
+[
+	{
+		"name": "hyptosis-brickwall",
+		"path": "tiles/hyptosis-brickwall.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-brickwallgrass",
+		"path": "tiles/hyptosis-brickwallgrass.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-brickwallstone",
+		"path": "tiles/hyptosis-brickwallstone.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-brickwalltop",
+		"path": "tiles/hyptosis-brickwalltop.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-grass",
+		"path": "tiles/hyptosis-grass.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-stone-floor",
+		"path": "tiles/hyptosis-stone-floor.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-stonewall",
+		"path": "tiles/hyptosis-stonewall.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "grass2",
+		"path": "tiles/grass2.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	}
+]

@@ -21,24 +21,30 @@ var inventory = [];
 var tileTypes = [];
 var entities = [];
 
+var factions = [];
+
 var actions = [];
 var events = [];
+
+var tickCount = 0;
 
 var renderer = new PIXI.autoDetectRenderer(2 * tileSize , 2 * tileSize, {backgroundColor:"0x444444"});
 renderer.roundPixels = true;
 var stage = new PIXI.Container();
+var backgroundLayer = new PIXI.Container();
 var tileLayer = new PIXI.Container();
 var highlightLayer = new PIXI.Container();
 var entityLayer = new PIXI.Container();
 var charLayer = new PIXI.Container();
 var overLayer = new PIXI.Container();
 var messages = new PIXI.Container();
+stage.addChild(backgroundLayer);
 stage.addChild(tileLayer);
 stage.addChild(highlightLayer);
 stage.addChild(entityLayer);
 stage.addChild(charLayer);
 stage.addChild(overLayer);
-overLayer.addChild(messages);
+stage.addChild(messages);
 
 var highlightBox = new PIXI.Graphics();
 
@@ -64,7 +70,7 @@ $(document).ready(function(){
 		$.getJSON('character.json', {}, function() {}),
 		$.getJSON('map1.json', {}, function() {})
 		//$.ajax({url: "map1.xml", success: function() {}, cache: false})
-	).done(function(arg1, arg2, arg3){
+	).done(function(arg1, arg2){
     	loadCharacter(arg1);
     	loadMapJson(arg2);
     	//loadMap(arg3);
@@ -143,14 +149,16 @@ $(document).ready(function(){
 }); 
 
 var Entity = function(obj) {
-	this.name = obj.name || "Generic entity";
+	this.name = obj.name || "generic entity";
 	this.posX = obj.posX;
 	this.posY = obj.posY;
 	this.moveX = obj.moveX || -1;
 	this.moveY = obj.moveY || -1;
+	this.moveSpeed = obj.moveSpeed || 10;
 	this.target = -1;
 	this.sprite = obj.sprite || null;
 	this.sprite2 = obj.sprite2 || null;
+	this.animateSprite = obj.animateSprite ? true : false;
 	this.shadow = obj.shadow ? true : false;
 	//console.log(obj.shadow + " " + this.shadow);
 	this.solid = obj.solid ? true : false;
@@ -158,16 +166,47 @@ var Entity = function(obj) {
 	this.type = obj.type || "decor";
 	this.quantity = obj.quantity || 1;
 	this.randomOffset = obj.randomOffset || 0;
-	this.animate = obj.animate ? true : false;
 	this.sound = obj.sound || null;
 	this.item = obj.item || null;
 	this.gold = obj.gold || null;
 	this.faction = obj.faction || null;
-	this.hp = obj.hp || null;
+	this.hp = obj.hp || 1;
+	this.sightRange = obj.sightRange || 0;
+	this.attackSkill = obj.attackSkill || 1;
+	this.damage = obj.damage || 1;
+	this.damageReduction = obj.damageReduction || 0;
+	this.attackRange = obj.attackRange || 1;
+	this.attackSpeed = obj.attackSpeed || 10;
+	this.defense = obj.defense || 5;
+	//"none", "attack", "farm", "merchant", 
+	this.currentAction = obj.currentAction || "none";
+	this.lastActionTick = 0;
 	this.actions = obj.actions || [];
+	this.animation = {"time" : 0, "duration" : 0, "type" : "sine", "direction" : [0,0]};
 
 	entities.push(this);
 };
+
+var Faction = function(name, f = [], n = [], h = []) {
+	this.friendly = f;
+	this.neutral = n;
+	this.hostile = h;
+	factions[name] = this;
+}
+
+var TileType = function(obj) {
+	this.name = obj.name || "generic type";
+	this.solid = obj.solid || false;
+	this.z = obj.z || 0;
+	this.sprite = obj.sprite || "";
+	this.rotate = obj.rotate || 0;
+	this.hue = obj.hue || 0;
+	this.brightness = obj.brightness || 0.9;
+	this.contrast = obj.contrast || 0;
+
+
+	tileTypes.push(this);
+}
 
 function loadCharacter(json) {
 	//console.log(json[0]);
@@ -184,7 +223,10 @@ function loadMapJson(json) {
 	playMusic(json[0].music);
 	entities[characterID].posX = json[0].spawnX;
 	entities[characterID].posY = json[0].spawnY;
-	tileTypes = json[0].tileTypes;
+	//tileTypes = json[0].tileTypes;
+	for(var i=0;i<json[0].tileTypes.length;i++) {
+		new TileType(json[0].tileTypes[i]);
+	}
 	tileGrid = json[0].tileMap;
 	//Invert tile grid
 	/*
@@ -197,10 +239,15 @@ function loadMapJson(json) {
 	for(var i=0;i<json[0].entities.length;i++) {
 		new Entity(json[0].entities[i]);
 	}
+
 	createMoveGrid();
 	resourceLoader();
 	drawTiles();
 	//drawEntities();
+	new Faction("undead", ["undead"], [], ["human", "kobold"]);
+	new Faction("human", ["human"], ["kobold"], ["undead"]);
+	new Faction("kobold",["kobold"],["human"],["undead"]);
+
 	$("#gold-count").text(entities[characterID].gold);
 	GameTimer.registerService(eachTick);
 	GameTimer.domReady();
@@ -215,14 +262,15 @@ function createMoveGrid() {
 			//console.log(i + " " + j + " " + tileTypes[gridCopy[i][j]].solid);
 			if (tileTypes[gridCopy[i][j]].solid) {
 				gridCopy[i][j] = 1;
+			} else if (checkForEntity(i,j)) {
+				gridCopy[i][j] = 2;
 			} else {
 				gridCopy[i][j] = 0;
 			}
 		}
 	} 
 	moveGrid = invertGrid(gridCopy);
-	console.log(moveGrid);
-	
+	//console.log(moveGrid);
 }
 
 function invertGrid(grid) {
@@ -234,147 +282,88 @@ function invertGrid(grid) {
 	return newGrid;
 }
 
-//function loadMap(xml) {
-	//var title = $(xml).find('title').text();
-	//$("#top-menu h3").text(title);
-	//levelHeight = $(xml).find('levelHeight').text();
-	//levelWidth = $(xml).find('levelWidth').text();
-	//renderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);
-	//backgroundTile = $(xml).find('backgroundTile').text();
-	//playMusic($(xml).find('music').text());
-
-	//Set spawn point
-	//var spawnX = parseInt($(xml).find('spawnX').text(), 10);
-	//var spawnY = parseInt($(xml).find('spawnY').text(), 10);
-	//characterPos = [spawnX,spawnY];
-	//character.x = spawnX;
-	//character.y = spawnY;
-	//entities[characterID].posX = spawnX;
-	//entities[characterID].posY = spawnY;
-	
-	
-	//Load entities
-	/*
-	var boolTypes = ['solid','active'];
-	var intTypes = ['quantity','gold', 'posX', 'posY'];
-	$(xml).find('entities').children().each(function(i) {
-		var entity = {};
-		entity.actions = []
-		 $.each(this.attributes, function(index, attrib){
-     		var name = attrib.name;
-     		var value = attrib.value;
-     		if (boolTypes.indexOf(name) != -1) {
-     			if (value == 'true')
-     				entity[name] = true;
-     			else
-     				entity[name] = false;
-     		} else if (intTypes.indexOf(name) != -1) {
-     			entity[name] = parseInt(value, 10);
-     		} else {
-     			entity[name] = value;
-     		}
-		});
-		$(this).find('actions').children().each(function(i) {
-			console.log($(this).text());
-			var action = {};
-			action.text = $(this).text();
-			$.each(this.attributes, function(index, attrib){
-     			action[attrib.name] = attrib.value;
-     		});
-			//var action
-			if (action.trigger == "entityNear") {
-				new Action(entity, "entityNear", null, action.text, true);
-			}
-			entity['actions'].push(action);
-		});
-		//entities.push(entity);
-		new Entity(entity);
-	});
-	*/
-	
-	//Load tiletypes
-	/*
-	$(xml).find('tileTypes').children().each(function(i) {
-		var tileType = {};
-		 $.each(this.attributes, function(index, attrib){
-     		var name = attrib.name;
-     		var value = attrib.value;
-     		if (boolTypes.indexOf(name) != -1) {
-     			if (value == 'true')
-     				tileType[name] = true;
-     			else
-     				tileType[name] = false;
-			} else if (intTypes.indexOf(name) != -1) {
-     			tileType[name] = parseInt(value, 10);
-     		} else {
-     			tileType[name] = value;
-     		}
-		});
-		tileTypes[tileType.index] = tileType;		
-	}); */
-	
-	/*
-	var rawMap = $(xml).find('map').text();
-	console.log(rawMap);
-	var rows  = rawMap.split("\n");  
-	for (var i=0;i<rows.length;i++) {
-		var values = rows[i].split(",");
-		tileGrid[i] = values;
-		moveGrid.push([]);
-		for (var j=0;j<values.length;j++) {
-			//tileGrid[i][j] = values[j];
-			if (tileTypes[values[j]].solid) {
-				moveGrid[i].push(1);
-			} else {
-				moveGrid[i].push(0);
-			}
-		}
-	}
-	// Switch x and y values
-	var newArray = tileGrid[0].map(function(col, i) { 
-  		return tileGrid.map(function(row) { 
-    		return row[i]; 
-  		})
-	});
-	tileGrid = newArray;
-	*/
-
-//}
-
 function drawTiles() {
 	
 	PIXI.loader.load(function (loader, resources) {
 		for (var i=0;i<tileGrid.length;i++) {
 			for (var j=0;j<tileGrid[i].length;j++) {
-				var colorMatrix = new PIXI.filters.ColorMatrixFilter();
- 				//Add slight random +/- contrast to tiles
- 				colorMatrix.contrast((getRandomInt(0,10))/100, true);
- 				//colorMatrix.hue(getRandomInt(0,6)-3, true);
-				var texture = new PIXI.Texture.fromImage(tileTypes[tileGrid[i][j]].sprite);
+
+				//TODO: Fix loader (see level-maker.js):
+				var texture = new PIXI.Texture.fromImage(tileTypes[backgroundTile].sprite);
 				var tile = new PIXI.Sprite(texture);
-				tile.position.x = i * tileSize + Math.abs(tileSize/2) + 2;
-				tile.position.y = j * tileSize + Math.abs(tileSize/2) + 2;
+				tile.position.x = i * tileSize + Math.floor(tileSize/2) + 2;
+				tile.position.y = j * tileSize + Math.floor(tileSize/2) + 2;
 				tile.scale.x = 1;
 				tile.scale.y = 1;
 				tile.anchor.x = 0.5;
 				tile.anchor.y = 0.5;
+				tile.rotation = tileTypes[backgroundTile].rotate * Math.PI / 180;
+
+				var contrast = new PIXI.filters.ColorMatrixFilter();
+ 				//Add slight random +/- contrast to tiles
+ 				contrast.contrast(tileTypes[backgroundTile].contrast + getRandomInt(0,10)/100, true);
+ 				var hue = new PIXI.filters.ColorMatrixFilter();
+ 				hue.hue(tileTypes[backgroundTile].hue);
+ 				var brightness = new PIXI.filters.ColorMatrixFilter();
+ 				brightness.brightness(tileTypes[backgroundTile].brightness);
+ 				/*
+ 				if (tileTypes[backgroundTile].hue != 0)
+ 					colorMatrix.hue(tileTypes[backgroundTile].hue);
+ 				if (tileTypes[backgroundTile].brightness != 1.0)
+ 					colorMatrix.brightness(tileTypes[backgroundTile].brightness);
+ 				*/
+ 				tile.filters = [contrast, hue, brightness];
+
+				backgroundLayer.addChild(tile);
+
+				if(tileGrid[i][j] == 0)
+					continue;
+
+ 				//TODO: Fix loader (see level-maker.js):
+				var texture2 = new PIXI.Texture.fromImage(tileTypes[tileGrid[i][j]].sprite);
+				var tile2 = new PIXI.Sprite(texture2);
+				tile2.position.x = i * tileSize + Math.floor(tileSize/2) + 2;
+				tile2.position.y = j * tileSize + Math.floor(tileSize/2) + 2;
+				tile2.scale.x = 1;
+				tile2.scale.y = 1;
+				tile2.anchor.x = 0.5;
+				tile2.anchor.y = 0.5;
+				tile2.rotation = tileTypes[tileGrid[i][j]].rotate * Math.PI / 180;
+				/*
 				if (tileTypes[tileGrid[i][j]].hasOwnProperty("randomrotate")) {
 					rotateDeg = getRandomInt(0,3) * 90;
 					tile.rotation = rotateDeg * Math.PI / 180;
-				}
-				tile.filters = [colorMatrix];
+				} */
+				//var colorMatrix2 = new PIXI.filters.ColorMatrixFilter();
+ 				//Add slight random +/- contrast to tiles
+ 				//colorMatrix2.contrast(tileTypes[tileGrid[i][j]].contrast + getRandomInt(0,10)/100, true);
+ 				var contrast2 = new PIXI.filters.ColorMatrixFilter();
+ 				contrast2.contrast(tileTypes[tileGrid[i][j]].contrast + getRandomInt(0,10)/100, true);
+ 				var hue2 = new PIXI.filters.ColorMatrixFilter();
+ 				hue2.hue(tileTypes[tileGrid[i][j]].hue);
+ 				var brightness2 = new PIXI.filters.ColorMatrixFilter();
+ 				brightness2.brightness(tileTypes[tileGrid[i][j]].brightness);
+ 				/*
+ 				if (tileTypes[tileGrid[i][j]].hue != 0)
+ 					colorMatrix2.hue(tileTypes[tileGrid[i][j]].hue);
+ 				if (tileTypes[tileGrid[i][j]].brightness != 1.0)
+ 					colorMatrix2.brightness(tileTypes[tileGrid[i][j]].brightness);
+				*/
+				tile2.filters = [contrast2, hue2, brightness2];
 				if (tileTypes[tileGrid[i][j]].z == 0) {
-					tileLayer.addChild(tile);
+					tileLayer.addChild(tile2);
 				} else {
-					overLayer.addChild(tile);
+					overLayer.addChild(tile2);
 				}
 			}
 		}
+		backgroundLayer.cacheAsBitmap = true;
+		tileLayer.cacheAsBitmap = true;
 		
 		//Blur & brightness filters for shadows
 		var blurFilter = new PIXI.filters.BlurFilter();
-        blurFilter.blur    = .5;
-        blurFilter.enabled = true;
+        //blurFilter.blur    = .5;
+        //blurFilter.enabled = true;
         var colorMatrix = new PIXI.filters.ColorMatrixFilter();
  		colorMatrix.brightness(0);
 		
@@ -383,7 +372,7 @@ function drawTiles() {
 			console.log(entities[i].name);
 			
 			// Animated sprites
-			if (entities[i].animate) {
+			if (entities[i].animateSprite) {
 				console.log("animating " + entities[i].name);
 				var frames = entities[i].sprite.split(',');
 				var textures = [];
@@ -401,7 +390,7 @@ function drawTiles() {
 			entities[i].spriteContainer.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
 			//entitySprite.position.x = entities[i].posX * tileSize + Math.round(tileSize/2) + 1;
 			//entitySprite.position.y = entities[i].posY * tileSize + Math.round(tileSize/2) + 1;
-			if (entities[i].hasOwnProperty('randomOffset')) {
+			if (entities[i].randomOffset) {
 				entitySprite.position.x += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
 				entitySprite.position.y += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
 			}
@@ -457,9 +446,10 @@ function moveChar(moveX, moveY, entityID = 0) {
 		console.log("Solid at " + moveX + "," + moveY);
 		return;
 	}
-	if (entityIneract([moveX,moveY])) {
+	if (entityIneract(entityID, [moveX,moveY])) {
 		entities[entityID].posX = moveX;
 		entities[entityID].posY = moveY;
+		createMoveGrid();
 		//console.log("Moved to " + character.x + "," + character.y);
 		if (entities[entityID].posX == entities[entityID].moveX && entities[entityID].posY == entities[entityID].moveY) {
 			entities[entityID].moveX = -1;
@@ -467,11 +457,11 @@ function moveChar(moveX, moveY, entityID = 0) {
 	}
 }
 
-function entityIneract(movePos) {
+function entityIneract(entityID, movePos) {
 	//Returns false if character movement blocked
 	var movedChar = true;
 	for (var i=0;i<entities.length;i++) {
-		if (entities[i].posX == movePos[0] && entities[i].posY == movePos[1] && entities[i].active) {
+		if (entities[i].posX == movePos[0] && entities[i].posY == movePos[1] && entities[i].active ) {
 			console.log("Entity interaction!");
 			if (entities[i].type == "gold") {
 				addGold(entities[i].quantity);
@@ -479,17 +469,14 @@ function entityIneract(movePos) {
 				playSound('sounds/coins.mp3');
 			}
 			if (entities[i].type == "item") {
-				var itemQuantity = 1;
-				if (entities[i].hasOwnProperty("quantity")) {
-					itemQuantity = entities[i].quantity;
-				}
-				addItem(entities[i].name, itemQuantity);
+				addItem(entities[i].name, entities[i].quantity);
 				entities[i].active = false;
 				playSound('sounds/bag-open.mp3');
 
 			}
 			if (entities[i].type == "container") {
 				var opened = false;
+				//TODO create inventory array for entities
 				if (entities[i].hasOwnProperty("item")) {
 					if (entities[i].hasOwnProperty("quantity")) {
 						addItem(entities[i].item, entities[i].quantity);
@@ -506,8 +493,10 @@ function entityIneract(movePos) {
 				}
 				var texture = new PIXI.Texture.fromImage(entities[i].sprite2);
 				entities[i].spriteObj.texture = texture;
-				if (opened)
+				if (opened) {
 					playSound('sounds/chest-open.mp3');
+					//createMoveGrid();
+				}
 			}
 			if (entities[i].type == "decor") {
 				if (entities[i].hasOwnProperty("sound"))
@@ -516,8 +505,10 @@ function entityIneract(movePos) {
 			if (entities[i].type == "npc") {
 				if (entities[i].hasOwnProperty("sound"))
 					playSound(entities[i].sound, 200);
-				if (isHostile(entities[i].faction, entities[characterID].faction)) {
-					new Action(entities[characterID], "attack", entities[i], null, true);
+				if (isHostile(entities[i].faction, entities[entityID].faction)) {
+					//new Action(entities[characterID], "attack", entities[i], null, true);
+					entities[entityID].target = entities[i];
+					entities[entityID].currentAction = "attack";
 				}
 			}
 			if (entities[i].type == "door") {
@@ -535,13 +526,14 @@ function entityIneract(movePos) {
 			}
 			if (entities[i].solid) {
 				console.log("solid at: " + entities[i].posX + " " + entities[i].posY);
-				moveGrid[entities[i].posY][entities[i].posX] = 1;
-				tempGrid = [entities[i].posX, entities[i].posY];
+				//moveGrid[entities[i].posY][entities[i].posX] = 1;
+				//tempGrid = [entities[i].posX, entities[i].posY];
 				movedChar = false;
 				//character.doneMoving = true;
 				entities[characterID].moveX = -1;
+				createMoveGrid();
 			}
-			if (entities[i].hasOwnProperty('actions')) {
+			if (entities[i].actions.length > 0) {
 				var actions = entities[i].actions;
 				for (var j=0;j<actions.length;j++) {
 					if (actions[j].trigger == 'interact') {
@@ -556,12 +548,12 @@ function entityIneract(movePos) {
 		}
 			
 	}
-	console.log(movedChar);
+	//console.log(movedChar);
 	return movedChar;
 }
 
+/*
 function attack(actionIndex) {
-	console.log("Attacking!");
 	var action = actions[actionIndex];
 	var roll = getRandomInt(1,20);
 	var attackSkill = action.entity.attackSkill || 1;
@@ -577,11 +569,43 @@ function attack(actionIndex) {
 			action.target.active = false;
 			//moveGrid[action.target.x][action.target.y] = 0;
 			showMessage(action.target.name + " died.");
+			createMoveGrid();
 		}
 	} else {
 		playSound("sounds/miss.mp3");
 		showMessage("Miss!");
 		showText("miss", 0xDDDDDD, action.target.spriteContainer.x, action.target.spriteContainer.y - 10);
+	}
+}*/
+
+function attack(attacker, target) {
+	var roll = getRandomInt(1,20);
+	//var attackSkill = attacker.attackSkill || 1;
+	//var defense = target.defense || 10;
+	//var damage = attacker.damage || 1;
+	//var damageReduction = target.damageReduction || 0;
+	var distance = getDistance(attacker, target);
+	if (distance > attacker.attackRange)
+		return;
+	if (roll + attacker.attackSkill > target.defense) {
+		target.hp -= attacker.damage;
+		target.animation = {"time" : Date.now() , "duration" : 100, "direction" : getDistance(attacker, target, true) };
+		attacker.animation = {"time" : Date.now() , "duration" : 100, "direction" : getDistance(attacker, target, true) };
+		playSound("sounds/sword-strike.mp3");
+		showMessage("Hit for " + attacker.damage + ". " + target.hp + "hp left!");
+		showText("-" + attacker.damage, 0xDD0000, target.spriteContainer.x, target.spriteContainer.y - 10);
+		if (target.hp < 1) {
+			target.active = false;
+			//moveGrid[action.target.x][action.target.y] = 0;
+			attacker.currentAction = "none";
+			attacker.target = -1;
+			showMessage(target.name + " died.");
+			createMoveGrid();
+		}
+	} else {
+		playSound("sounds/miss.mp3");
+		showMessage("Miss!");
+		showText("miss", 0xDDDDDD, target.spriteContainer.x, target.spriteContainer.y - 10);
 	}
 }
 
@@ -663,6 +687,16 @@ function showText(text, color = 0xDEDE39, posX = entities[characterID].spriteObj
 	messages.addChild(message);
 }
 
+function getDistance(entity1, entity2, returnXY = false) {
+	var deltaX = entity2.posX - entity1.posX;
+    var deltaY = entity2.posY - entity1.posY;
+    if (returnXY) {
+    	return [deltaX, deltaY];
+    } else {
+    	return Math.abs(deltaX) + Math.abs(deltaY);
+	}
+}
+
 function inspectTile(xPos, yPos) {
 	for (var i=0;i<entities.length;i++) {
 		if (entities[i].posX == xPos && entities[i].posY == yPos) {
@@ -674,27 +708,28 @@ function inspectTile(xPos, yPos) {
 }
 
 function findPath(xPos, yPos, entityID = 0) {
-	var moveableTiles = [0];
-	//moveGrid[6][4] = 1;
+	if(checkForEntity(xPos, yPos)) {
+		moveGrid[yPos][xPos] = 0;
+	}
 	var easystar = new EasyStar.js();
     easystar.setGrid(moveGrid);
-    easystar.setAcceptableTiles(moveableTiles);
+    easystar.setAcceptableTiles([0]);
     
     //If next to solid entity, interact instead of pathfinding
     if (Math.abs(entities[entityID].posX - xPos) == 1 && entities[entityID].posY == yPos && checkForEntity(xPos, yPos)) {
-    	moveChar(xPos, yPos);
+    	moveChar(xPos, yPos, entityID);
     	entities[entityID].moveX = -1;
     	return;
     }
     if (Math.abs(entities[entityID].posY - yPos) == 1 && entities[entityID].posX == xPos && checkForEntity(xPos, yPos)) {
-    	moveChar(xPos, yPos);
+    	moveChar(xPos, yPos, entityID);
     	entities[entityID].moveX = -1;
     	return;
     }
     easystar.findPath(entities[entityID].posX, entities[entityID].posY, xPos, yPos, function( path ) {
     	try {
     		if (path[1] != null) {
-    			moveChar(path[1].x, path[1].y);
+    			moveChar(path[1].x, path[1].y, entityID);
     		} else {
     			entities[entityID].moveX = -1;
     			return;
@@ -716,10 +751,11 @@ function findPath(xPos, yPos, entityID = 0) {
 			} */
 	});
 	easystar.calculate();
+	/*
 	if (tempGrid.length > 0) {
 		moveGrid[tempGrid[1]][tempGrid[0]] = 0;
 		tempGrid = [];
-	}
+	} */
 }
 
 function checkForEntity(x, y) {
@@ -736,10 +772,13 @@ function checkForEntity(x, y) {
 }
 
 function isHostile(faction, ownFaction) {
-	if (faction == "undead")
+	//console.log(faction + ownFaction);
+	if (faction == null || ownFaction == null)
+		return false;
+	if (factions[ownFaction].hostile.indexOf(faction) > -1)
 		return true;
-	if (ownFaction == "undead")
-		return true;
+	//if (ownFaction == "undead")
+	//	return true;
 	return false;
 }
 
@@ -803,18 +842,6 @@ function animate() {
 	    // start the timer for the next animation loop
 	    requestAnimationFrame(animate);
 	
-	    //charSprite.rotation += 0.01;
-		/*
-	    var charSpriteX = (character.spriteObj.position.x - 2 - Math.round(tileSize/2))/tileSize;
-	    var charSpriteY = (character.spriteObj.position.y - 2 - Math.round(tileSize/2))/tileSize;
-
-	    if (charSpriteX != character.x) {
-	    	character.spriteObj.position.x += (character.x - charSpriteX) * 4.0;
-	    }
-	    if (charSpriteY != character.y) {
-	    	character.spriteObj.position.y += (character.y - charSpriteY) * 4.0;
-	    } */
-	    
 	    for (var i=0;i<entities.length;i++) {
 	    	//Fade out inactive entities
 	    	if (entities[i].active == false && entities[i].spriteObj.visible == true) {
@@ -824,16 +851,28 @@ function animate() {
 	    		}
 	    	}
 
-	    	if (['decor', 'container', 'gold', 'door'].indexOf(entities[i].type) > -1)
+	    	if (['decor', 'container', 'gold', 'door', 'item'].indexOf(entities[i].type) > -1)
 	    		continue;
-    		//var entitySpriteX = (entities[i].spriteContainer.position.x - 1 - Math.round(tileSize/2))/tileSize;
+
+	    	if (entities[i].currentAction == "attack") {
+	    		if (getDistance(entities[i], entities[i].target) <= entities[i].attackRange) {
+	    			var dist = getDistance(entities[i], entities[i].target, true);
+	    			entities[i].spriteContainer.position.x += dist[0];
+	    			entities[i].spriteContainer.position.y += dist[1];
+	    		}	
+	    	}
+
+	    	if (entities[i].animation.time + entities[i].animation.duration > Date.now()) {
+	    		entities[i].spriteContainer.position.x += entities[i].animation.direction[0];
+	    		entities[i].spriteContainer.position.y += entities[i].animation.direction[1];
+	    	}
+
     		var entitySpriteX = entities[i].posX * tileSize + Math.abs(tileSize/2) + 2;
-		    //var entitySpriteY = (entities[i].spriteContainer.position.y - 1 - Math.round(tileSize/2))/tileSize;
 		    var entitySpriteY = entities[i].posY * tileSize + Math.abs(tileSize/2) + 2;
 		
 		    if (Math.abs(entities[i].spriteContainer.position.x - entitySpriteX) >= 0.5) {
 		    	entities[i].spriteContainer.position.x += (entitySpriteX - entities[i].spriteContainer.position.x) * 0.16;
-		    	console.log(entitySpriteX + " " + entities[i].spriteContainer.position.x);
+		    	//console.log(entitySpriteX + " " + entities[i].spriteContainer.position.x);
 		    }
 		    if (Math.abs(entitySpriteY - entities[i].spriteContainer.position.y) >= 0.5) {
 		    	entities[i].spriteContainer.position.y += (entitySpriteY - entities[i].spriteContainer.position.y) * 0.16;
@@ -900,30 +939,63 @@ var GameTimer = (function () {
 })();
 
 var eachTick = function(){
- 
+ 	tickCount++;
+ 	var tickCycle = tickCount%20 + 1;
+ 	//console.log(tickCycle);
     for (var i=0;i<entities.length;i++) {
+    	if (!entities[i].active)
+    		continue;
+    	var targetDistance = null;
+    	//Look for target
+    	if (entities[i].sightRange > 0) {
+    		for (var j=0;j<entities.length;j++) {
+    			//var deltaX = Math.abs(entities[i].posX - entities[j].posX);
+    			//var deltaY = Math.abs(entities[i].posY - entities[j].posY);
+    			targetDistance = getDistance(entities[i], entities[j]);
+    			if (targetDistance <= entities[i].sightRange && i != j && entities[j].active) {
+    				if (isHostile(entities[j].faction, entities[i].faction)) {
+						//new Action(entities[characterID], "attack", entities[i], null, true);
+						entities[i].target = entities[j];
+						entities[i].currentAction = "attack";
+						if (entities[i].attackRange < targetDistance) {
+							entities[i].moveX = entities[j].posX;
+							entities[i].moveY = entities[j].posY;
+						} else {
+							entities[i].moveX = -1;
+						}
+					}
+    			}
+    		}
+    	}
+
     	//Move Entity
-    	if (entities[i].moveX != -1) {
+    	if (entities[i].moveX != -1 && tickCycle%entities[i].moveSpeed == 0) {
     		//character.x = character.moveX;
     		//character.y = character.moveY;
     		findPath(entities[i].moveX, entities[i].moveY, i);
    		}
     
     	//Attack Target
-    	
+    	if (entities[i].currentAction == "attack" && tickCount - entities[i].lastActionTick > entities[i].attackSpeed) {
+    		attack(entities[i], entities[i].target);
+    		entities[i].lastActionTick = tickCount;
+    	}
+
     	//Perform Actions
+    	/*
     	if(entities[i].actions.length > 0 && entities[i].active) {
     		runEntityActions(i);
-    	}
+    	} */
     }
     
-    runActions();
+    //runActions();
     
     for (var i=0;i<events.length;i++) {
     
     }
 };
 
+/*
 function runEntityActions(entityID) {
 	var entity = entities[entityID];
 	for (var i=0;i<entity.actions.length;i++) {
@@ -931,8 +1003,9 @@ function runEntityActions(entityID) {
 			continue;
 		
 	}
-}
+} */
 
+/*
 function runActions() {
 	for (var i=0;i<actions.length;i++) {
 		if (actions[i].active == false)
@@ -976,7 +1049,7 @@ function runActions() {
     			break;
     	}
     }
-}
+} */
 
 function resourceLoader() {
 	var sprites = [];
@@ -990,7 +1063,7 @@ function resourceLoader() {
 		//console.log(entities[i].sprite);
 		if (!entities[i].sprite)
 			continue;
-		if (sprites.indexOf(entities[i].sprite) == -1 && !entities[i].hasOwnProperty('animate')) {
+		if (sprites.indexOf(entities[i].sprite) == -1 && !entities[i].animateSprite) {
 			sprites.push(entities[i].sprite);
 			//console.log(entities[i].sprite);
 		} else {
@@ -998,44 +1071,22 @@ function resourceLoader() {
 			for (var f=0;f<frames.length;f++) {
 				if (sprites.indexOf(frames[f]) == -1) {
 					sprites.push(frames[f]);
-					//console.log(frames[f]);
 				}
 			}
 		}
-		if (entities[i].hasOwnProperty('sprite2')) {
+		if (entities[i].sprite2) {
 			if (sprites.indexOf(entities[i].sprite2) == -1 && entities[i].sprite2) {
 				sprites.push(entities[i].sprite2);
 			}
 		}
-		if (entities[i].hasOwnProperty('sound')) {
+		if (entities[i].sound) {
 			//Preload entity sounds
 			cacheSound(entities[i].sound);
-			/*
-			if (!sounds.hasOwnProperty(entities[i].sound)) {
-				var audio = new Audio();
-    			audio.src = entities[i].sound;
-    			audio.preload = "auto";
-    			sounds[entities[i].sound] = audio;
-				//var entitySound = new sound();
-				//sounds.push(entitySound);
-				
-			} */
 		}
 	}
 	for (var i=0;i<sprites.length;i++) {
-		//console.log(sprites[i]);
 		PIXI.loader.add(sprites[i]);
 	}
-	/*
-	PIXI.loader.add('sprites/torch-fr1.png');
-	PIXI.loader.add('sprites/torch-fr2.png');
-	PIXI.loader.add('sprites/torch-fr3.png');
-	*/
-	//for (var i=0;i<entities.length;i++) {
-	//	PIXI.loader.add(entities[i].sprite);
-	//}
-	//PIXI.loader.add(character.sprite);
-
 
 	//Load sounds
 	cacheSound('sounds/bag-open.mp3');

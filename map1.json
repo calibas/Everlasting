@@ -17,28 +17,30 @@
 		[2,4,4,4,4,4,4,4,2,4,4,2,0,0,0,4]
 	],
 	"tileTypes" : [
-		{"name" : "grass", "solid" : false, "z" : 0, "sprite" : "tiles/hyptosis-grass.png"},
-		{"name" : "rocks", "solid" : true, "z" : 0, "sprite" : "tiles/hyptosis-stonewall.png"},
-		{"name" : "wall", "solid" : true, "z" : 0, "sprite" : "tiles/hyptosis-brickwall.png"},
-		{"name" : "wall", "solid" : true, "z" : 0, "sprite" : "tiles/hyptosis-brickwallstone.png"},
+		{"name" : "grass", "sprite" : "tiles/hyptosis-grass.png"},
+		{"name" : "rocks", "solid" : true, "sprite" : "tiles/hyptosis-stonewall.png"},
+		{"name" : "wall", "solid" : true, "sprite" : "tiles/hyptosis-brickwall.png"},
+		{"name" : "wall", "solid" : true, "sprite" : "tiles/hyptosis-brickwallstone.png"},
 		{"name" : "wall", "solid" : true, "z" : 101, "sprite" : "tiles/hyptosis-brickwalltop.png"},
-		{"name" : "stone floor", "solid" : false, "z" : 0, "sprite" : "tiles/hyptosis-stone-floor.png"}
+		{"name" : "stone floor", "hue" : 50,"brightness" : 1.5, "contrast" : -0.5, "sprite" : "tiles/hyptosis-stone-floor.png"}
 	],
 	"entities" : [
 		{"posX" : 15, "posY" : 3, "sprite" : "sprites/bush.png", "type" : "decor", "name" : "bush", "shadow" : true, "randomOffset" : 8, "sound" : "sounds/crunch.mp3"},
 		{"posX" : 14, "posY" : 1, "sprite" : "sprites/bush.png", "type" : "decor", "name" : "bush", "shadow" : true, "randomOffset" : 8, "sound" : "sounds/crunch.mp3"},
 		{"posX" : 12, "posY" : 0, "sprite" : "sprites/bush.png", "type" : "decor", "name" : "bush", "shadow" : true, "randomOffset" : 8, "sound" : "sounds/crunch.mp3"},
 		{"posX" : 14, "posY" : 7, "sprite" : "sprites/bush.png", "type" : "decor", "name" : "bush", "shadow" : true, "randomOffset" : 8, "sound" : "sounds/crunch.mp3"},
-		{"posX" : 6, "posY" : 6, "sprite" : "sprites/torch-fr1.png,sprites/torch-fr2.png,sprites/torch-fr3.png", "type" : "decor", "name" : "torch", "shadow" : true, "randomOffset" : 8, "animate" : true},
+		{"posX" : 6, "posY" : 6, "sprite" : "sprites/torch-fr1.png,sprites/torch-fr2.png,sprites/torch-fr3.png", "type" : "decor", "name" : "torch", "shadow" : true, "randomOffset" : 8, "animateSprite" : true},
 		{"posX" : 2, "posY" : 4, "sprite" : "sprites/gold-coins.png", "type" : "gold", "name" : "gold", "quantity" : 7, "randomOffset" : 8},
 		{"posX" : 4, "posY" : 2, "sprite" : "sprites/gold-coins.png", "type" : "gold", "name" : "gold", "quantity" : 9, "randomOffset" : 8},
 		{"posX" : 10, "posY" : 1, "sprite" : "sprites/chest-closed.png", "sprite2" : "sprites/chest-open.png", "solid" : true, "type" : "container", "name" : "chest", "item" : "key", "gold" : 3},
 		{"posX" : 10, "posY" : 6, "sprite" : "sprites/dagger.png", "type" : "item", "name" : "dagger", "shadow" : true},
-		{"posX" : 1, "posY" : 6, "sprite" : "sprites/kobold.png", "solid" : true, "type" : "npc", "name" : "kobold prisoner", "faction" : "kobold", "hp" : 5, "sound" : "sounds/grunt.mp3", 
+		{"posX" : 1, "posY" : 6, "moveX" : 10, "moveY" : 4, "moveSpeed" : 3, "sprite" : "sprites/kobold.png", "solid" : true, "type" : "npc", "name" : "kobold prisoner", "faction" : "kobold", "hp" : 5, "sound" : "sounds/grunt.mp3", 
 			"actions" : [
 				{"trigger" : "interact", "action" : "say", "repeat" : "false", "active" : "true", "data" : "Hello!"}]},
 		{"posX" : 11, "posY" : 5, "sprite" : "sprites/door.png", "sprite2" : "sprites/door2.png", "solid" : "true", "type" : "door", "name" : "door"},
-		{"posX" : 13, "posY" : 7, "sprite" : "sprites/skeleton.png", "solid" : true, "type" : "npc", "name" : "skeleton", "faction" : "undead", "hp" : "10"}
+		{"posX" : 13, "posY" : 7, "moveX" : 13, "moveY" : 4, "sprite" : "sprites/skeleton.png", "solid" : true, "type" : "npc", "name" : "skeleton", "sightRange" : 2, "faction" : "undead", "hp" : "10"},
+		{"posX" : 14, "posY" : 7, "moveX" : 13, "moveY" : 4, "sprite" : "sprites/skeleton.png", "solid" : true, "type" : "npc", "name" : "skeleton", "sightRange" : 10, "faction" : "undead", "hp" : "10"},
+		{"posX" : 13, "posY" : 2, "sprite" : "sprites/skeleton.png", "solid" : true, "type" : "npc", "name" : "skeleton", "sightRange" : 10, "faction" : "undead", "hp" : "10"}
 
 	]
 }

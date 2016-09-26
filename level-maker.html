@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Everlasting - Level Maker</title>
+<meta charset="utf-8">
+<script src="jquery.min.js"></script>
+<!-- <script src="easystar/easystar-0.3.0.min.js"></script> -->
+<script src="pixi/pixi.min.js"></script>
+<!-- <script src="game.js"></script> -->
+<script src="level-maker.js"></script>
+<style type='text/css'>
+html {height:100%;}
+body{
+	padding:0;
+	margin:0;
+	background-image: radial-gradient(farthest-corner at 50% 30% , rgb(33, 102, 120) 0%, rgb(11, 38, 42) 100%);
+	min-height: 100%;
+}
+#top-menu {
+	position:relative;
+	top:0px;
+	width:100%;
+	height:35px;
+	background-color:#444;
+	border-bottom:1px solid #222;
+	color:#EEE;
+}
+#top-menu h3 {
+    margin: 0;
+    padding: 0;
+    text-align: center;
+}
+#top-settings {
+  position:absolute;
+  top:0px;
+  right:0px;
+}
+#mute-music, #mute-sound {
+	display:inline-block;
+	padding:5px;
+}
+#mute-music img, #mute-sound img {
+  height:25px;
+  width:auto;
+}
+#game-area-wrapper {
+	margin-top:15px;
+	text-align: center;
+	margin-bottom:150px;
+}
+#input {
+	position: fixed;
+	width: 100%;
+	height:200px;
+	bottom: 0px;
+	background-color: rgba(255,255,255,0.2);
+	border-top: 5px solid #062a3b;
+}
+#message-log, #controls, #info {
+  width:33.3333333%;
+  height:100%;
+  position:absolute;
+  top:0px;
+}
+#message-log{
+  background-color:rgba(0,0,0,0.4);
+  left:0px;
+  overflow-y: scroll;
+  color:white;
+}
+#controls {
+	left:33.3333333%;
+}
+#info {
+	left:66.6666666%;
+	overflow-y:scroll;
+}
+ul.controlTabs {list-style-type: none;margin: 0;padding: 0;overflow: hidden;background-color: #0d1f44;}
+ul.controlTabs li {float: left;}
+ul.controlTabs li a {display: inline-block;color: #EEE;text-align: center;padding: 6px 16px;text-decoration: none;transition: 0.2s;font-size: 17px;}
+ul.controlTabs li a:hover {background-color: #28477D;}
+ul.controlTabs li a:focus, .active {background-color: #153162;}
+.tabcontent {display: none;padding: 6px 12px;border: 1px solid #ccc;border-top: none;}
+#tileSelection {
+	position: absolute;
+	right: 0;
+	top: 0;
+}
+#tileSelection img {
+	border: 5px solid #FFF;
+}
+.tileInfo {
+  border:1px solid #555;
+}
+.tileInfo img{
+	vertical-align:middle;
+}
+</style>
+</head>
+<body>
+<div id="top-menu">
+  <div id="top-settings">
+	<div id="mute-sound"><img src="sound-icon.png" /></div>	
+	<div id="mute-music"><img src="music-icon.png" /></div>
+  </div>
+  <h3></h3>
+</div>
+<div id="game-area-wrapper">
+</div>
+<div id="input">
+	<div id="message-log"></div>
+	<div id="stats"></div>
+	<div id="controls">
+		<ul class="controlTabs">
+		  <li><a href="#" class="tablinks active" onclick="openTab(event, 'level-settings')">Level Settings</a></li>
+		  <li><a href="#" class="tablinks" onclick="openTab(event, 'tile-types')">Tile Types</a></li>
+		  <li><a href="#" class="tablinks" onclick="openTab(event, 'entities')">Entities</a></li>
+		  <li><a href="#" class="tablinks" onclick="openTab(event, 'events')">Events</a></li>
+		</ul>
+
+		<div id="level-settings" class="tabcontent" style="display:block;">
+			<form id="whForm">
+			Width: <input type="text" id="levelWidth" value="8"><br>
+  			Height:	<input type="text" id="levelHeight" value="8"><br>
+  			BackgroundTileID: <input type="text" id="bgTileID" value="0"><br>
+  			<!--TileGrid: <input type="" id="tileGridJSON" value=""><br> -->
+  			TileGrid:<br>
+  			<textarea id="tileGridJSON" name="json" >JSON...</textarea>
+  			<input type="submit" value="Submit">
+			</form>
+		</div>
+
+		<div id="tile-types" class="tabcontent">
+		</div>
+
+		<div id="entities" class="tabcontent">
+		</div>
+
+		<div id="events" class="tabcontent">
+		</div>
+	<div id="tileSelection"></div>
+	</div>
+	<div id="info">
+		<div id="tileList"></div>
+	</div>
+</div>
+</body>
+</html>
