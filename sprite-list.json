@@ -1,0 +1,106 @@
+[
+	{
+		"name": "bush",
+		"path": "sprites/bush.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "chest closed",
+		"path": "sprites/chest-closed.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "chest open",
+		"path": "sprites/chest-open.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "dagger",
+		"path": "sprites/dagger.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "door",
+		"path": "sprites/door.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "door2",
+		"path": "sprites/door2.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "fighter2",
+		"path": "sprites/fighter2.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "gold coins",
+		"path": "sprites/gold-coins.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "kobold",
+		"path": "sprites/kobold.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "skeleton",
+		"path": "sprites/skeleton.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "torch1",
+		"path": "sprites/torch-fr1.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "torch2",
+		"path": "sprites/torch-fr2.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "torch3",
+		"path": "sprites/torch-fr3.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	}
+]

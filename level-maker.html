@@ -56,34 +56,63 @@ body{
 	background-color: rgba(255,255,255,0.2);
 	border-top: 5px solid #062a3b;
 }
-#message-log, #controls, #info {
-  width:33.3333333%;
-  height:100%;
-  position:absolute;
-  top:0px;
+#input input {
+  width:32px;
 }
-#message-log{
+#input input.tsSprite {
+    width: 250px;
+}
+.tileSetting {
+  color:white;
+  font-size:10px;
+  font-family:Arial;
+}
+#message-area, #controls, #info {
+  width:33.3333333%;
+  height:85%;
+  position:absolute;
+  bottom:0px;
+}
+#message-area{
   background-color:rgba(0,0,0,0.4);
   left:0px;
   overflow-y: scroll;
   color:white;
 }
+#message-area textarea {
+  width:100%;
+  max-width:100%;
+  height:120px;
+}
 #controls {
 	left:33.3333333%;
+	overflow-y:scroll;
 }
 #info {
 	left:66.6666666%;
 	overflow-y:scroll;
 }
-ul.controlTabs {list-style-type: none;margin: 0;padding: 0;overflow: hidden;background-color: #0d1f44;}
-ul.controlTabs li {float: left;}
-ul.controlTabs li a {display: inline-block;color: #EEE;text-align: center;padding: 6px 16px;text-decoration: none;transition: 0.2s;font-size: 17px;}
-ul.controlTabs li a:hover {background-color: #28477D;}
-ul.controlTabs li a:focus, .active {background-color: #153162;}
-.tabcontent {display: none;padding: 6px 12px;border: 1px solid #ccc;border-top: none;}
+#controlTabsWrapper, #controlTabsWrapper2, #controlTabsWrapper3 {
+  width:33.3333333%;
+  height:15%;
+  position:absolute;
+  overflow:hidden;
+}
+#controlTabsWrapper {
+  left:33.3333333%;
+}
+#controlTabsWrapper3 {
+  left:66.6666666%;
+}
+ul.controlTabs, ul.controlTabs2, ul.controlTabs3 {list-style-type: none;margin: 0;padding: 0;overflow: hidden;background-color: #0d1f44;}
+ul.controlTabs li, ul.controlTabs2 li, ul.controlTabs3 li {float: left;}
+ul.controlTabs li a, ul.controlTabs2 li a, ul.controlTabs3 li a {display: inline-block;color: #EEE;text-align: center;padding: 6px 16px;text-decoration: none;transition: 0.2s;font-size: 17px;}
+ul.controlTabs li a:hover, ul.controlTabs2 li a:hover, ul.controlTabs3 li a:hover {background-color: #28477D;}
+ul.controlTabs li a:focus, ul.controlTabs2 li a:focus, .active, ul.controlTabs3 li a:focus {background-color: #153162;}
+.tabcontent, .tabcontent2, .tabcontent3 {display: none;padding: 6px 12px;border: 1px solid #ccc;border-top: none;}
 #tileSelection {
 	position: absolute;
-	right: 0;
+	right: 19px;
 	top: 0;
 }
 #tileSelection img {
@@ -108,41 +137,70 @@ ul.controlTabs li a:focus, .active {background-color: #153162;}
 <div id="game-area-wrapper">
 </div>
 <div id="input">
-	<div id="message-log"></div>
+	<div id="controlTabsWrapper2">
+	<ul class="controlTabs2">
+		  <li><a href="#" class="tablinks2 active" onclick="openTab2(event, 'message-log')">Message Log</a></li>
+		  <li><a href="#" class="tablinks2" onclick="openTab2(event, 'JSONoutput')">JSON Output</a></li>
+		  <li><a href="#" class="tablinks2" onclick="openTab2(event, 'JSONinput')">JSON Input</a></li>
+	</ul>
+	</div>
+	<div id="controlTabsWrapper">
+	<ul class="controlTabs">
+		  <li><a href="#" class="tablinks active" onclick="openTab(event, 'level-settings')">Level Settings</a></li>
+		  <li><a href="#" class="tablinks" onclick="openTab(event, 'tileList')">Tile List</a></li>
+		  <li><a href="#" class="tablinks" onclick="openTab(event, 'spriteList')">Sprite List</a></li>
+	</ul>
+	</div>
+	<div id="controlTabsWrapper3">
+	<ul class="controlTabs3">
+		  <li><a href="#" class="tablinks3 active" onclick="openTab3(event, 'tileSet')">Tile Set</a></li>
+		  <li><a href="#" class="tablinks3" onclick="openTab3(event, 'entities')">Entities</a></li>
+		  <li><a href="#" class="tablinks3" onclick="openTab3(event, 'events')">Events</a></li>
+	</ul>
+	</div>
+	<div id="message-area">
+		<div id="message-log" class="tabcontent2" style="display:block;">
+		</div>
+
+		<div id="JSONoutput" class="tabcontent2">
+			<textarea id="tileGridJSON" name="json" >JSON...</textarea>
+		</div>
+
+		<div id="JSONinput" class="tabcontent2">
+			<textarea id="levelJSONinput" name="json-input" >JSON...</textarea>
+			<button id="levelJSONSubmit">Submit</button>
+		</div>
+
+	</div>
 	<div id="stats"></div>
 	<div id="controls">
-		<ul class="controlTabs">
-		  <li><a href="#" class="tablinks active" onclick="openTab(event, 'level-settings')">Level Settings</a></li>
-		  <li><a href="#" class="tablinks" onclick="openTab(event, 'tile-types')">Tile Types</a></li>
-		  <li><a href="#" class="tablinks" onclick="openTab(event, 'entities')">Entities</a></li>
-		  <li><a href="#" class="tablinks" onclick="openTab(event, 'events')">Events</a></li>
-		</ul>
 
 		<div id="level-settings" class="tabcontent" style="display:block;">
 			<form id="whForm">
+			Title: <input type="text" id="levelTitle" value="My Level"><br>
 			Width: <input type="text" id="levelWidth" value="8"><br>
   			Height:	<input type="text" id="levelHeight" value="8"><br>
-  			BackgroundTileID: <input type="text" id="bgTileID" value="0"><br>
-  			<!--TileGrid: <input type="" id="tileGridJSON" value=""><br> -->
-  			TileGrid:<br>
-  			<textarea id="tileGridJSON" name="json" >JSON...</textarea>
-  			<input type="submit" value="Submit">
+  			GridLine: <input type="text" id="gridLine" value="1"><br>
+  			BGColor: <input type="text" id="bgColor" value="444444"><br>
+  			LevelPadding: <input type="text" id="levelPadding" value="3"><br>
+  			SpawnX: <input type="text" id="levelSpawnX" value="1"><br>
+  			SpawnY: <input type="text" id="levelSpawnY" value="1"><br>
 			</form>
 		</div>
 
-		<div id="tile-types" class="tabcontent">
+		<div id="tileList" class="tabcontent">
 		</div>
 
-		<div id="entities" class="tabcontent">
+		<div id="spriteList" class="tabcontent">
 		</div>
-
-		<div id="events" class="tabcontent">
-		</div>
-	<div id="tileSelection"></div>
 	</div>
 	<div id="info">
-		<div id="tileList"></div>
+		<div id="tileSet" class="tabcontent3" style="display:block;"></div>
+		<div id="entities" class="tabcontent3"></div>
+		<div id="events" class="tabcontent3"></div>
+
 	</div>
+	<div id="tileSelection"></div>
 </div>
 </body>
 </html>

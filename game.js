@@ -68,7 +68,7 @@ $(document).ready(function(){
 	
 	$.when (
 		$.getJSON('character.json', {}, function() {}),
-		$.getJSON('map1.json', {}, function() {})
+		$.getJSON('map3.json', {}, function() {})
 		//$.ajax({url: "map1.xml", success: function() {}, cache: false})
 	).done(function(arg1, arg2){
     	loadCharacter(arg1);
@@ -216,16 +216,16 @@ function loadCharacter(json) {
 
 function loadMapJson(json) {
 	$("#top-menu h3").text(json[0].title);
-	levelHeight = json[0].levelHeight;
-	levelWidth = json[0].levelWidth;
+	levelHeight = json[0].height;
+	levelWidth = json[0].width;
 	renderer.resize(levelWidth * tileSize + 3, levelHeight * tileSize + 3);
 	backgroundTile = json[0].backgroundTile;
 	playMusic(json[0].music);
 	entities[characterID].posX = json[0].spawnX;
 	entities[characterID].posY = json[0].spawnY;
 	//tileTypes = json[0].tileTypes;
-	for(var i=0;i<json[0].tileTypes.length;i++) {
-		new TileType(json[0].tileTypes[i]);
+	for(var i=0;i<json[0].tileSet.length;i++) {
+		new TileType(json[0].tileSet[i]);
 	}
 	tileGrid = json[0].tileMap;
 	//Invert tile grid
@@ -235,7 +235,7 @@ function loadMapJson(json) {
     		return row[i]; 
   		})
 	}); */
-	tileGrid = invertGrid(tileGrid);
+	//tileGrid = invertGrid(tileGrid);
 	for(var i=0;i<json[0].entities.length;i++) {
 		new Entity(json[0].entities[i]);
 	}
@@ -362,7 +362,7 @@ function drawTiles() {
 		
 		//Blur & brightness filters for shadows
 		var blurFilter = new PIXI.filters.BlurFilter();
-        //blurFilter.blur    = .5;
+        blurFilter.blur    = 0.5;
         //blurFilter.enabled = true;
         var colorMatrix = new PIXI.filters.ColorMatrixFilter();
  		colorMatrix.brightness(0);
@@ -402,8 +402,8 @@ function drawTiles() {
 			entitySprite.anchor.y = 0.5;
 			if (entities[i].shadow) {
 				shadow = new PIXI.Sprite(texture);
-				shadow.position.x = entitySprite.position.x;
-				shadow.position.y = entitySprite.position.y + 5;
+				shadow.position.x = entitySprite.position.x + 2;
+				shadow.position.y = entitySprite.position.y + 2;
 				shadow.anchor.x = 0.5;
 				shadow.anchor.y = 0.5;
 				shadow.alpha = 0.3;
