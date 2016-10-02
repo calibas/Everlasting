@@ -51,6 +51,11 @@ var Entity = function(obj) {
 	this.sprite2 = obj.sprite2 || null;
 	this.animateSprite = obj.animateSprite ? true : false;
 	this.shadow = obj.shadow ? true : false;
+	this.scaleX = obj.scaleX || 1.0;
+	this.scaleY = obj.scaleY || 1.0;
+	this.hue = obj.hue || 0;
+	this.brightness = obj.brightness || 1.0;
+	this.contrast = obj.contrast || 0;
 	//console.log(obj.shadow + " " + this.shadow);
 	this.solid = obj.solid ? true : false;
 	this.active = obj.active || true;
@@ -73,7 +78,7 @@ var Entity = function(obj) {
 	this.currentAction = obj.currentAction || "none";
 	this.lastActionTick = 0;
 	this.actions = obj.actions || [];
-	this.animation = {"time" : 0, "duration" : 0, "type" : "sine", "direction" : [0,0]};
+	//this.animation = {"time" : 0, "duration" : 0, "type" : "sine", "direction" : [0,0]};
 
 	entities.push(this);
 };
@@ -178,11 +183,57 @@ $(document).ready(function(){
     		tileSet[i].z = parseInt($("#tileset-" + i + " .tsZ").val());
     		tileSet[i].solid = JSON.parse($("#tileset-" + i + " .tsSolid").val());
     		tileSet[i].rotate = parseInt($("#tileset-" + i + " .tsRotate").val());
+
     		console.log(tileSet[i]);
     	}
     	refreshTileSetImg();
     	createTileGrid();
         drawTiles();
+    });
+
+    $("#entities").change(function(){
+    	for (var i=0;i<entities.length;i++) { 
+		entities[i].name = $("#entity-" + i + " .entName").val();
+		entities[i].sprite = $("#entity-" + i + " .entSprite").val();
+		entities[i].sprite2 = $("#entity-" + i + " .entSprite2").val();
+		entities[i].animateSprite = JSON.parse($("#entity-" + i + " .entAnimate").val());
+		entities[i].posX = parseInt($("#entity-" + i + " .entPosX").val());
+		entities[i].posY = parseInt($("#entity-" + i + " .entPosY").val());
+		entities[i].brightness = parseFloat($("#entity-" + i + " .entBrightness").val());
+		entities[i].hue = parseInt($("#entity-" + i + " .entHue").val());
+		entities[i].contrast = parseFloat($("#entity-" + i + " .entContrast").val());
+		entities[i].scaleX = parseFloat($("#entity-" + i + " .entScaleX").val());
+		entities[i].scaleY = parseFloat($("#entity-" + i + " .entScaleY").val());
+		entities[i].shadow = JSON.parse($("#entity-" + i + " .entShadow").val());
+		entities[i].type = $("#entity-" + i + " .entType").val();
+		entities[i].quantity = parseInt($("#entity-" + i + " .entQuantity").val());
+		entities[i].randomOffset = parseInt($("#entity-" + i + " .entRandomOffset").val());
+		entities[i].sound = $("#entity-" + i + " .entSound").val();
+		entities[i].item = $("#entity-" + i + " .entItem").val();
+		entities[i].gold = parseInt($("#entity-" + i + " .entGold").val());
+		entities[i].faction = $("#entity-" + i + " .entFaction").val();
+		entities[i].hp = parseInt($("#entity-" + i + " .entHP").val());
+		entities[i].sightRange = parseInt($("#entity-" + i + " .entSightRange").val());
+		entities[i].attackSkill = parseInt($("#entity-" + i + " .entAttackSkill").val());
+		entities[i].damage = parseInt($("#entity-" + i + " .entDamage").val());
+		entities[i].damageReduction = parseInt($("#entity-" + i + " .entDamageReduction").val());
+		entities[i].attackRange = parseInt($("#entity-" + i + " .entAttackRange").val());
+		entities[i].attackSkill = parseInt($("#entity-" + i + " .entAttackSkill").val());
+		entities[i].defense = parseInt($("#entity-" + i + " .entDefense").val());
+    		/*
+    		tileSet[i].brightness = parseFloat($("#tileset-" + i + " .tsBright").val());
+    		tileSet[i].hue = parseInt($("#tileset-" + i + " .tsHue").val());
+    		tileSet[i].contrast = parseFloat($("#tileset-" + i + " .tsContrast").val());
+    		tileSet[i].sprite = $("#tileset-" + i + " .tsSprite").val();
+    		tileSet[i].z = parseInt($("#tileset-" + i + " .tsZ").val());
+    		tileSet[i].solid = JSON.parse($("#tileset-" + i + " .tsSolid").val());
+    		tileSet[i].rotate = parseInt($("#tileset-" + i + " .tsRotate").val());
+    		console.log(tileSet[i]);
+    		*/
+    	}
+    	//refreshTileSetImg();
+    	createTileGrid();
+        drawEntities();
     });
 
 	$.when (
@@ -199,6 +250,9 @@ $(document).ready(function(){
     	//loadCharacter(arg1);
     	//loadMapJson(arg2);
     	//loadMap(arg3);
+    	//onLoad();
+		loader.on('complete', onLoad);
+		loader.load();
 	});
 	
 	//Make arrow keys move character
@@ -300,6 +354,14 @@ $(document).ready(function(){
 		//tileSelection = parseInt(liID.substr(5));
 		//$("#tileSelection").html('<img src="' + tileList[tileSelection].path + '">');
 	});
+	$("#spriteList").click(function(e){
+		if (e.target.tagName == "BUTTON") {
+			var liID = e.target.parentElement.id.substr(7);
+			console.log(e.target.parentElement.id.substr(7));
+			new Entity({"name" : spriteList[liID].name, "sprite" : spriteList[liID].path});
+			loadEntities();
+		}
+	});
 	$("#levelJSONSubmit").click(function(e){
 		level = JSON.parse($("#levelJSONinput").val());
 		tileSet = [];
@@ -318,8 +380,10 @@ $(document).ready(function(){
         renderer.resize(level.width * (level.tileSize + level.gridLine) + ( 2 * level.padding), level.height * (level.tileSize + level.gridLine) + ( 2 * level.padding));
 
 		updateTileSet();
+		loadEntities();
 		createTileGrid();
 		drawTiles();
+		drawEntities();
 	});
 	$("#mute-music").click(function(e){
 		if (music.paused) {
@@ -368,14 +432,44 @@ function loadSprites(spriteListJSON) {
 
 function loadEntities(entityList) {
 	console.log("loadEntities()");
+	$("#entities").empty();
 	for (var i=0;i<entities.length;i++) {
-		var entityInfo = '<li class="entityInfo" id="entity-' + i + '"><img src="'+ entities[i].sprite + '"> ' + i + ' ' + entities[i].name + '<button>+</button></li>';
+		var entityInfo = '<li class="entityInfo" id="entity-' + i + '"><img src="'+ entities[i].sprite + '"> ' + i + ' ' + entities[i].name;
+		entityInfo += '<button onclick="toggleEntitySettings(' + i + ')">+</button>';
+		entityInfo += '<div class="entitySetting" id="entitySetting-' + i + '" style="display:none;">';
+		entityInfo += 'Name:<input type="text" class="entName" value="' + entities[i].name + '">';
+		entityInfo += 'Sprite:<input type="text" class="entSprite" value="' + entities[i].sprite + '">';
+		entityInfo += 'Sprite2:<input type="text" class="entSprite2" value="' + entities[i].sprite2 + '">';
+		entityInfo += 'Animate:<input type="text" class="entAnimate" value="' + entities[i].animateSprite + '">';
+		entityInfo += 'PosX:<input type="text" class="entPosX" value="' + entities[i].posX + '">';
+		entityInfo += 'PosY:<input type="text" class="entPosY" value="' + entities[i].posY + '">';
+		entityInfo += 'Brightness:<input type="text" class="entBrightness" value="' + entities[i].brightness + '">';
+		entityInfo += 'Contrast:<input type="text" class="entContrast" value="' + entities[i].contrast + '">';
+		entityInfo += 'Hue:<input type="text" class="entHue" value="' + entities[i].hue + '">';
+		entityInfo += 'ScaleX:<input type="text" class="entScaleX" value="' + entities[i].scaleX + '">';
+		entityInfo += 'ScaleY:<input type="text" class="entScaleY" value="' + entities[i].scaleY + '">';
+		entityInfo += 'Shadow:<input type="text" class="entShadow" value="' + entities[i].shadow + '">';
+		entityInfo += 'Type:<input type="text" class="entType" value="' + entities[i].type + '">';
+		entityInfo += 'Quantity:<input type="text" class="entQuantity" value="' + entities[i].quantity + '">';
+		entityInfo += 'RandomOffset:<input type="text" class="entRandomOffset" value="' + entities[i].randomOffset + '">';
+		entityInfo += 'Sound:<input type="text" class="entSound" value="' + entities[i].sound + '">';
+		entityInfo += 'Item:<input type="text" class="entItem" value="' + entities[i].item + '">';
+		entityInfo += 'Gold:<input type="text" class="entGold" value="' + entities[i].gold + '">';
+		entityInfo += 'Faction:<input type="text" class="entFaction" value="' + entities[i].faction + '">';
+		entityInfo += 'HP:<input type="text" class="entHP" value="' + entities[i].hp + '">';
+		entityInfo += 'SightRange:<input type="text" class="entSightRange" value="' + entities[i].sightRange + '">';
+		entityInfo += 'AttackSkill:<input type="text" class="entAttackSkill" value="' + entities[i].attackSkill + '">';
+		entityInfo += 'Damage:<input type="text" class="entDamage" value="' + entities[i].damage + '">';
+		entityInfo += 'DamageReduction:<input type="text" class="entDamageReduction" value="' + entities[i].damageReduction + '">';
+		entityInfo += 'AttackRange:<input type="text" class="entAttackRange" value="' + entities[i].attackRange + '">';
+		entityInfo += 'AttackSkill:<input type="text" class="entAttackSkill" value="' + entities[i].attackSkill + '">';
+		entityInfo += 'Defense:<input type="text" class="entDefense" value="' + entities[i].defense + '">';
+		entityInfo += 'Actions:';
+		entityInfo += '</div></li>';
 		//loader.add(tileList[i].path, tileList[i].path);
 		$("#entities").append(entityInfo);
 	}
-	//onLoad();
-	loader.on('complete', onLoad);
-	loader.load();
+
 }
 
 function updateTileSet() {
@@ -400,7 +494,7 @@ function updateTileSet() {
 }
 
 function createTileSetImg(tsID) {
-	var imgHTML = '<img class="tileSetImg" data-id="' + tsID + '" src="'+ tileSet[tsID].sprite + '" style="filter:contrast(' + ((tileSet[tsID].contrast < -1.0) ? 0 : tileSet[tsID].contrast + 1.0) * 100 + '%) hue-rotate(' + tileSet[tsID].hue + 'deg) brightness(' + tileSet[tsID].brightness * 100 + '%);">';
+	var imgHTML = '<img class="tileSetImg" data-id="' + tsID + '" src="'+ tileSet[tsID].sprite + '" style="filter:contrast(' + ((tileSet[tsID].contrast < -1.0) ? 0 : tileSet[tsID].contrast + 1.0) * 100 + '%) hue-rotate(' + tileSet[tsID].hue + 'deg) brightness(' + tileSet[tsID].brightness * 100 + '%);transform:rotate(' + tileSet[tsID].rotate + 'deg);">';
 	return imgHTML;
 }
 
@@ -420,8 +514,9 @@ function onLoad() {
 	createTileGrid();
 	loaded = true;
 	//console.log(level.tileMap);
-	//animate();
 	drawTiles();
+	drawEntities();
+	animate();
 	$("#tileSelection").html(createTileSetImg(tileSelection));
 }
 
@@ -445,9 +540,7 @@ function drawTiles() {
 		backgroundLayer.removeChildren();
 		backgroundLayer.cacheAsBitmap = false;
 		tileLayer.removeChildren();
-		charLayer.removeChildren();
 		tileLayer.cacheAsBitmap = false;
-		var halfPadding = Math.floor(level.padding/2);
 		for (var i=0;i<level.width;i++) {
 			for (var j=0;j<level.height;j++) {
 				//var colorMatrix = new PIXI.filters.ColorMatrixFilter();
@@ -464,7 +557,7 @@ function drawTiles() {
 				tile.scale.y = 1;
 				tile.anchor.x = 0.5;
 				tile.anchor.y = 0.5;
-
+				tile.rotation = tileSet[bgTileID].rotate * Math.PI / 180;
 
 				var contrast = new PIXI.filters.ColorMatrixFilter();
  				//Add slight random +/- contrast to tiles
@@ -490,6 +583,7 @@ function drawTiles() {
 					tile2.scale.y = 1;
 					tile2.anchor.x = 0.5;
 					tile2.anchor.y = 0.5;
+					tile2.rotation = tileSet[level.tileMap[i][j]].rotate * Math.PI / 180;
 
 					var contrast2 = new PIXI.filters.ColorMatrixFilter();
  					//Add slight random +/- contrast to tiles
@@ -505,7 +599,15 @@ function drawTiles() {
 				}
 			}
 		}
+	backgroundLayer.cacheAsBitmap = true;
+	tileLayer.cacheAsBitmap = true;
+	}
+}
 
+function drawEntities() {
+	console.log("drawEntities()");
+	if (loaded){
+		charLayer.removeChildren();
 		for (var i=0;i<entities.length;i++) {
 			entities[i].spriteContainer = new PIXI.Container();
 			console.log(entities[i].name);
@@ -533,21 +635,30 @@ function drawTiles() {
 				entitySprite.position.x += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
 				entitySprite.position.y += getRandomInt(0,entities[i].randomOffset * 2) - entities[i].randomOffset;
 			}
-			//entitySprite.position.x = entities[i].spriteContainer.position.x;
-			//entitySprite.position.y = entities[i].spriteContainer.position.y;
-			entitySprite.scale.x = 1;
-			entitySprite.scale.y = 1;
+			var contrast = new PIXI.filters.ColorMatrixFilter();
+ 			contrast.contrast(entities[i].contrast, true);
+ 			var hue = new PIXI.filters.ColorMatrixFilter();
+ 			hue.hue(entities[i].hue);
+ 			var brightness = new PIXI.filters.ColorMatrixFilter();
+ 			brightness.brightness(entities[i].brightness);
+
+			entitySprite.filters = [contrast, hue, brightness];
+			console.log(entities[i].scaleX + " " + entities[i].scaleY);
+			entitySprite.scale.x = entities[i].scaleX;
+			entitySprite.scale.y = entities[i].scaleY;
+			//entitySprite.scale.x = 1;
+			//entitySprite.scale.y = 1;
 			entitySprite.anchor.x = 0.5;
 			entitySprite.anchor.y = 0.5;
 			if (entities[i].shadow) {
 				//Blur & brightness filters for shadows
-			var blurFilter = new PIXI.filters.BlurFilter();
-        	blurFilter.blur    = 0.5;
-        	//blurFilter.enabled = true;
-        	var colorMatrix = new PIXI.filters.ColorMatrixFilter();
- 			colorMatrix.brightness(0);
+				var blurFilter = new PIXI.filters.BlurFilter();
+	        	blurFilter.blur    = 0.5;
+	        	//blurFilter.enabled = true;
+	        	var colorMatrix = new PIXI.filters.ColorMatrixFilter();
+	 			colorMatrix.brightness(0);
 
-				shadow = new PIXI.Sprite(texture);
+				var shadow = new PIXI.Sprite(texture);
 				shadow.position.x = entitySprite.position.x + 2;
 				shadow.position.y = entitySprite.position.y + 2;
 				shadow.anchor.x = 0.5;
@@ -555,16 +666,13 @@ function drawTiles() {
 				shadow.alpha = 0.3;
 				shadow._tint = 0x000000;
 				shadow.filters = [colorMatrix,blurFilter];
-				entities[i].shadow = shadow;
-				entities[i].spriteContainer.addChild(entities[i].shadow);
+				entities[i].shadowObj = shadow;
+				entities[i].spriteContainer.addChild(entities[i].shadowObj);
 			}
 			entities[i].spriteObj = entitySprite;
 			entities[i].spriteContainer.addChild(entities[i].spriteObj);
 			charLayer.addChild(entities[i].spriteContainer);
 		}
-	backgroundLayer.cacheAsBitmap = true;
-	tileLayer.cacheAsBitmap = true;
-	animate();
 	}
 }
 
@@ -662,30 +770,24 @@ function toggleTileSettings(elementID) {
 	$('#tileSetting-' + elementID).toggle();
 }
 
+function toggleEntitySettings(elementID) {
+	$('#entitySetting-' + elementID).toggle();
+}
+
 function stringifyReplacer(key, value) {
-  // Filtering out properties
-  //if (key == "tileSet") {
-  //  return JSON.stringify(tileSet);
-  //}
   if (key == "spriteContainer") {
-  //	return false;
-    return false;
+    return undefined;
   }
   if (key == "spriteObj") {
-  //	return false;
-    return false;
+    return undefined;
   }
+  /*
   if (key == "shadow" && typeof value === "boolean") {
-  //	return false;
     return value;
+  } */
+  if (key == "shadowObj") {
+    return undefined;
   }
-  if (key == "shadow") {
-  //	return false;
-    return null;
-  }
-  //if (key == "events") {
-  //  return JSON.stringify(events);
-  //}
   return value;
 }
 

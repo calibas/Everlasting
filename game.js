@@ -182,7 +182,7 @@ var Entity = function(obj) {
 	this.currentAction = obj.currentAction || "none";
 	this.lastActionTick = 0;
 	this.actions = obj.actions || [];
-	this.animation = {"time" : 0, "duration" : 0, "type" : "sine", "direction" : [0,0]};
+	//this.animation = {"time" : 0, "duration" : 0, "type" : "sine", "direction" : [0,0]};
 
 	entities.push(this);
 };

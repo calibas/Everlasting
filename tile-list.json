@@ -62,5 +62,29 @@
 		"source-url": "",
 		"license": "",
 		"info": ""
+	},
+	{
+		"name": "hyptosis-grass-trans1",
+		"path": "tiles/hyptosis-grass-trans1.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-grass-trans2",
+		"path": "tiles/hyptosis-grass-trans2.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
+	},
+	{
+		"name": "hyptosis-grass-trans3",
+		"path": "tiles/hyptosis-grass-trans3.png",
+		"author": "",
+		"source-url": "",
+		"license": "",
+		"info": ""
 	}
 ]
